@@ -3,6 +3,7 @@ import "./auxiliary.js";
 import "./beepers.js";
 import "./blackbox.js";
 import "./cli.js";
+import "./presets/presets.js"
 import "./configuration.js";
 import "./failsafe.js";
 import "./firmware_flasher.js";
@@ -23,3 +24,4 @@ import "./sensors.js";
 import "./servos.js";
 import "./setup.js";
 import "./status.js";
+import 'multiple-select';
