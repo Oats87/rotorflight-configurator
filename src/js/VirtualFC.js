@@ -5,7 +5,7 @@ export const VirtualFC = {
 
         virtualFC.resetState();
 
-        virtualFC.CONFIG.flightControllerVersion = "4.2.4";
+        virtualFC.CONFIG.flightControllerVersion = "4.4.0";
         virtualFC.CONFIG.apiVersion = CONFIGURATOR.virtualApiVersion;
 
         virtualFC.BEEPER_CONFIG.beepers = new Beepers(FC.CONFIG);
