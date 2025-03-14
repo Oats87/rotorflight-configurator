@@ -4,13 +4,10 @@ import SourcePanel from "@/js/presets/panels/source_panel.js";
 export default class PresetsSourcesDialog {
     #dom = {};
 
-    #sources = [];
+    #sourcesMetadata = [];
     #sourcePanels = [];
 
     #repositorySelectedPromiseResolve = null;
-
-    #activeSourcesIndexes = [0];
-
 
     constructor(domDialog) {
         this.#dom.dialog = domDialog;
@@ -33,7 +30,9 @@ export default class PresetsSourcesDialog {
     }
 
     getActivePresetSources() {
-        return this.#activeSourcesIndexes.map(index => this.#sources[index]);
+        //return this.#activeSourcesIndexes.map(index => this.#sources[index]);
+        console.log(this.#sourcesMetadata);
+        return this.#sourcesMetadata.filter(source => source.active);
     }
 
     get isThirdPartyActive() {
@@ -41,45 +40,33 @@ export default class PresetsSourcesDialog {
     }
 
     #initializeSources() {
-        this.#sources = this.#readSourcesFromStorage();
-        this.#activeSourcesIndexes = this.#readActiveSourceIndexesFromStorage(this.#sources.length);
+        this.#loadSourcesMetadataFromStorage();
 
-        for (let i = 0; i < this.#sources.length; i++) {
-            const isActive = this.#activeSourcesIndexes.includes(i);
-            this.#addNewSourcePanel(this.#sources[i], isActive, false);
+        for (let i = 0; i < this.#sourcesMetadata.length; i++) {
+            this.#addNewSourcePanel(this.#sourcesMetadata[i], false);
         }
     }
 
-    #readSourcesFromStorage() {
-        const officialSource = this.#createOfficialSource();
-
-        let sources = null;
-        ConfigStorage.get('PresetSources', function(result) {
-            if (result.PresetSource) {
-                sources = result.PresetSources;
+    #loadSourcesMetadataFromStorage() {
+        const self = this;
+        ConfigStorage.get('PresetSourcesMetadata', function(result) {
+            if (result.PresetSourcesMetadata) {
+                console.log(result.PresetSourcesMetadata);
+                self.#sourcesMetadata = result.PresetSourcesMetadata;
             }
         });
-
-        if (sources && sources.length > 0) {
-            sources[0] = officialSource;
-        } else {
-            console.log("Setting sources to defaults");
-            sources = [officialSource];
-        }
-
-        return sources;
+        this.#sourcesMetadata.unshift(this.#createOfficialSource());
+        console.log(this.#sourcesMetadata);
     }
 
-    #readActiveSourceIndexesFromStorage() {
-        ConfigStorage.get('PresetSourcesActiveIndexes', function(result) {
-            return result.PresetSourcesActiveIndexes || [0];
-        });
-        return [0];
+    #saveSourcesMetadataToStorage() {
+        ConfigStorage.set({'PresetSourcesMetadata': this.#sourcesMetadata.filter(function(source) { if (source == null) { return false; } console.log(source); return !source.official; } )});
     }
 
     #createOfficialSource() {
         const officialSource = new PresetsSourceMetadata("Rotorflight Official Presets", "https://github.com/Oats87/rotorflight-presets", "main");
         officialSource.official = true;
+        officialSource.active = true;
         return officialSource;
     }
 
@@ -103,8 +90,9 @@ export default class PresetsSourcesDialog {
         this.#dom.divSourcesPanel.animate({scrollTop: `${this.#dom.divSourcesPanel.prop('scrollHeight')}px`});
     }
 
-    #addNewSourcePanel(presetSource, isActive = false, isSelected = true) {
-        const sourcePanel = new SourcePanel(this.#dom.divSourcesPanel, presetSource);
+    //#addNewSourcePanel(presetSource, isActive = false, isSelected = true) {
+    #addNewSourcePanel(presetsSourceMetadata, isSelected = true) {
+        const sourcePanel = new SourcePanel(this.#dom.divSourcesPanel, presetsSourceMetadata);
         this.#sourcePanels.push(sourcePanel);
         return sourcePanel.load().then(() => {
             sourcePanel.setOnSelectedCallback(selectedPanel => this.#onSourcePanelSelected(selectedPanel));
@@ -112,7 +100,7 @@ export default class PresetsSourcesDialog {
             sourcePanel.setOnActivateCallback(selectedPanel => this.#onSourcePanelActivated(selectedPanel));
             sourcePanel.setOnDeactivateCallback(selectedPanel => this.#onSourcePanelDeactivated(selectedPanel));
             sourcePanel.setOnSaveCallback(() => this.#onSourcePanelSaved());
-            sourcePanel.setActive(isActive);
+            sourcePanel.setActive(presetsSourceMetadata.active);
             if (isSelected) {
                 this.#onSourcePanelSelected(sourcePanel);
             }
@@ -133,24 +121,15 @@ export default class PresetsSourcesDialog {
     }
 
     #readPanels() {
-        this.#sources = [];
-        this.#activeSourcesIndexes = [];
+        this.#sourcesMetadata = [];
         for (let i = 0; i < this.#sourcePanels.length; i++) {
-            this.#sources.push(this.#sourcePanels[i].presetSource);
-            if (this.#sourcePanels[i].active) {
-                this.#activeSourcesIndexes.push(i);
-            }
+            this.#sourcesMetadata.push(this.#sourcePanels[i].presetsSourceMetadata);
         }
-    }
-
-    #saveSources() {
-        ConfigStorage.set({'PresetSources': this.#sources});
-        ConfigStorage.set({'PresetSourcesActiveIndexes': this.#activeSourcesIndexes});
     }
 
     #updateSourcesFromPanels() {
         this.#readPanels();
-        this.#saveSources();
+        this.#saveSourcesMetadataToStorage();
     }
 
     #onSourcePanelSaved() {

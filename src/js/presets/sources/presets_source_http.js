@@ -1,8 +1,8 @@
 import PresetsSource from "@/js/presets/sources/presets_source.js";
 
 export default class PresetsSourceHttp extends PresetsSource {
-    constructor(url, official, name) {
-        let correctUrl = url.trim();
+    constructor(presetsSourceMetadata) {
+        let correctUrl = presetsSourceMetadata.url.trim();
 
         if (!correctUrl.endsWith("/")) {
             correctUrl += "/";
@@ -11,6 +11,6 @@ export default class PresetsSourceHttp extends PresetsSource {
         const urlRaw = correctUrl;
         const urlViewOnline = correctUrl;
 
-        super(urlRaw, urlViewOnline, official, name);
+        super(presetsSourceMetadata, urlRaw, urlViewOnline);
     }
 }

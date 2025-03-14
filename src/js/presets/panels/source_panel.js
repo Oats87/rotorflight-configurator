@@ -1,27 +1,33 @@
 import PresetsSourceUtil from "@/js/presets/sources/presets_source_util.js";
 
 export default class SourcePanel {
-    constructor(parentDiv, presetSource) {
-        this._parentDiv = parentDiv;
-        this._presetSource = presetSource;
-        this._active = false;
+    
+    #dom = {};
+    #domId = "";
+
+    #parentDiv;
+    #presetsSourceMetadata;
+
+    constructor(parentDiv, presetSourceMetadata) {
+        this.#parentDiv = parentDiv;
+        this.#presetsSourceMetadata = presetSourceMetadata;
     }
 
-    get presetSource() {
-        return this._presetSource;
+    get presetsSourceMetadata() {
+        return this.#presetsSourceMetadata;
     }
 
     load() {
         SourcePanel.s_panelCounter++;
-        this._domId = `source_panel_${SourcePanel.s_panelCounter}`;
-        this._parentDiv.append(`<div id="${this._domId}"></div>`);
-        this._domWrapperDiv = $(`#${this._domId}`);
-        this._domWrapperDiv.toggle(false);
+        this.#domId = `source_panel_${SourcePanel.s_panelCounter}`;
+        this.#parentDiv.append(`<div id="${this.#domId}"></div>`);
+        this.#dom.divWrapper = $(`#${this.#domId}`);
+        this.#dom.divWrapper.toggle(false);
 
         return new Promise(resolve => {
-            this._domWrapperDiv.load("./tabs/presets/SourcesDialog/SourcePanel.html",
+            this.#dom.divWrapper.load("./tabs/presets/SourcesDialog/SourcePanel.html",
             () => {
-                this._setupHtml();
+                this.#setupHtml();
                 resolve();
             });
         });
@@ -61,19 +67,15 @@ export default class SourcePanel {
         this._setUiSelected(isSelected);
     }
 
-    get active() {
-        return this._active;
-    }
-
     setActive(isActive) {
-        this._active = isActive;
-        this._domDivSelectedIndicator.toggle(this._active);
+        this.#presetsSourceMetadata.active = isActive;
+        this._domDivSelectedIndicator.toggle(this.#presetsSourceMetadata.active);
         this._domButtonActivate.toggle(!isActive);
         this._domButtonDeactivate.toggle(isActive);
     }
 
     _setUiOfficial() {
-        if (this.presetSource.official){
+        if (this.#presetsSourceMetadata.official){
             this._domButtonSave.toggle(false);
             this._domButtonReset.toggle(false);
             this._domButtonDelete.toggle(false);
@@ -104,20 +106,20 @@ export default class SourcePanel {
     }
 
     _updateNoEditingName() {
-        this._domDivNoEditingName.text(this._presetSource.name);
+        this._domDivNoEditingName.text(this.#presetsSourceMetadata.name);
     }
 
-    _setupHtml() {
+    #setupHtml() {
         this._readDom();
         this._setupActions();
         this.setSelected(false);
         this._setIsSaved(true);
         this._checkIfGithub();
-        this.setActive(this._active);
+        this.setActive(this.#presetsSourceMetadata.active);
         this._setUiOfficial();
 
         i18n.localizePage();
-        this._domWrapperDiv.toggle(true);
+        this.#dom.divWrapper.toggle(true);
     }
 
     _setupActions() {
@@ -152,23 +154,23 @@ export default class SourcePanel {
     }
 
     _onSaveButtonClick() {
-        this._presetSource.name = this._domEditName.val();
-        this._presetSource.url = this._domEditUrl.val();
-        this._presetSource.gitHubBranch = this._domEditGitHubBranch.val();
+        this.#presetsSourceMetadata.name = this._domEditName.val();
+        this.#presetsSourceMetadata.url = this._domEditUrl.val();
+        this.#presetsSourceMetadata.branch = this._domEditGitHubBranch.val();
         this._setIsSaved(true);
         this._onSaveCallback?.(this);
     }
 
     _onResetButtonClick() {
-        this._domEditName.val(this._presetSource.name);
-        this._domEditUrl.val(this._presetSource.url);
-        this._domEditGitHubBranch.val(this._presetSource.gitHubBranch);
+        this._domEditName.val(this.#presetsSourceMetadata.name);
+        this._domEditUrl.val(this.#presetsSourceMetadata.url);
+        this._domEditGitHubBranch.val(this.#presetsSourceMetadata.branch);
         this._checkIfGithub();
         this._setIsSaved(true);
     }
 
     _onDeleteButtonClick() {
-        this._domWrapperDiv.remove();
+        this.#dom.divWrapper.remove();
         this._onDeletedCallback?.(this);
     }
 
@@ -195,23 +197,23 @@ export default class SourcePanel {
     }
 
     _readDom() {
-        this._domDivInnerPanel = this._domWrapperDiv.find(".presets_source_panel");
-        this._domDivNoEditing = this._domWrapperDiv.find(".presets_source_panel_no_editing");
-        this._domDivEditing = this._domWrapperDiv.find(".presets_source_panel_editing");
+        this._domDivInnerPanel = this.#dom.divWrapper.find(".presets_source_panel");
+        this._domDivNoEditing = this.#dom.divWrapper.find(".presets_source_panel_no_editing");
+        this._domDivEditing = this.#dom.divWrapper.find(".presets_source_panel_editing");
 
-        this._domEditName = this._domWrapperDiv.find(".presets_source_panel_editing_name_field");
-        this._domEditUrl = this._domWrapperDiv.find(".presets_source_panel_editing_url_field");
-        this._domEditGitHubBranch = this._domWrapperDiv.find(".presets_source_panel_editing_branch_field");
+        this._domEditName = this.#dom.divWrapper.find(".presets_source_panel_editing_name_field");
+        this._domEditUrl = this.#dom.divWrapper.find(".presets_source_panel_editing_url_field");
+        this._domEditGitHubBranch = this.#dom.divWrapper.find(".presets_source_panel_editing_branch_field");
 
-        this._domButtonSave = this._domWrapperDiv.find(".presets_source_panel_save");
-        this._domButtonReset = this._domWrapperDiv.find(".presets_source_panel_reset");
-        this._domButtonActivate = this._domWrapperDiv.find(".presets_source_panel_activate");
-        this._domButtonDeactivate = this._domWrapperDiv.find(".presets_source_panel_deactivate");
-        this._domButtonDelete = this._domWrapperDiv.find(".presets_source_panel_delete");
-        this._domDivGithubBranch = this._domWrapperDiv.find(".presets_source_panel_editing_github_branch");
-        this._domDivNoEditingName = this._domWrapperDiv.find(".presets_source_panel_no_editing_name");
+        this._domButtonSave = this.#dom.divWrapper.find(".presets_source_panel_save");
+        this._domButtonReset = this.#dom.divWrapper.find(".presets_source_panel_reset");
+        this._domButtonActivate = this.#dom.divWrapper.find(".presets_source_panel_activate");
+        this._domButtonDeactivate = this.#dom.divWrapper.find(".presets_source_panel_deactivate");
+        this._domButtonDelete = this.#dom.divWrapper.find(".presets_source_panel_delete");
+        this._domDivGithubBranch = this.#dom.divWrapper.find(".presets_source_panel_editing_github_branch");
+        this._domDivNoEditingName = this.#dom.divWrapper.find(".presets_source_panel_no_editing_name");
 
-        this._domDivSelectedIndicator = this._domWrapperDiv.find(".presets_source_panel_no_editing_selected");
+        this._domDivSelectedIndicator = this.#dom.divWrapper.find(".presets_source_panel_no_editing_selected");
     }
 }
 

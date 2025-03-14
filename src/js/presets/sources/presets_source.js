@@ -1,43 +1,41 @@
 import PresetParser from "@/js/presets/parser.js";
 
 export default class PresetsSource {
-    constructor(metadata, urlRaw, urlViewOnline, official, name) {
-        this.presetsSourceMetadata = metadata;
-        this._urlRaw = urlRaw;
-        this._urlViewOnline = urlViewOnline;
-        this._index = null;
-        this._name = name;
-        this._official = official;
+    #presetsSourceMetadata;
+    #urlRaw;
+    #urlViewOnline;
+    #index;
+
+    #presetParser;
+
+    constructor(metadata, urlRaw, urlViewOnline) {
+        this.#presetsSourceMetadata = metadata;
+        this.#urlRaw = urlRaw;
+        this.#urlViewOnline = urlViewOnline;
+        this.#index = null;
     }
 
     get metadata() {
-        return this.presetsSourceMetadata;
+        return this.#presetsSourceMetadata;
     }
 
     get index() {
-        return this._index;
-    }
-
-    get official() {
-        return this._official;
-    }
-
-    get name() {
-        return this._name;
+        return this.#index;
     }
 
     loadIndex() {
-        return fetch(`${this._urlRaw}index.json`, {cache: "no-cache"})
+        console.log("Fetching: "+this.#urlRaw+"index.json");
+        return fetch(`${this.#urlRaw}index.json`, {cache: "no-cache"})
             .then(res => res.json())
             .then(out => {
-                this._index = out;
-                this._settings = this._index.settings;
-                this._PresetParser = new PresetParser(this._index.settings);
+                this.#index = out;
+                console.log(this.#index.settings);
+                this.#presetParser = new PresetParser(this.#index.settings);
             });
     }
 
     getPresetOnlineLink(preset) {
-        return this._urlViewOnline + preset.fullPath;
+        return this.#urlViewOnline + preset.fullPath;
     }
     
     // parseInclude parses the given strings and adds promises generated _loadPresetText for each include
@@ -48,15 +46,15 @@ export default class PresetsSource {
 
             if (match !== null) {
                 includeRowIndexes.push(i);
-                const filePath = this._urlRaw + match.groups.filePath;
+                const filePath = this.#urlRaw + match.groups.filePath;
                 const promise = this.#loadPresetText(filePath);
                 promises.push(promise.then(text => {
                     let tmpStrings = text.split("\n");
                     tmpStrings = tmpStrings.map(str => str.trim());
                     let strings = [];
                     for (let line of tmpStrings) {
-                        if (line.startsWith(this._settings.MetapropertyDirective)) {
-                            if (line.slice(this._settings.MetapropertyDirective.length).trim().toLowerCase().startsWith(this._settings.OptionsDirectives.OPTION_DIRECTIVE)) {
+                        if (line.startsWith(this.#index.settings.MetapropertyDirective)) {
+                            if (line.slice(this.#index.settings.MetapropertyDirective.length).trim().toLowerCase().startsWith(this.#index.settings.OptionsDirectives.OPTION_DIRECTIVE)) {
                                 strings.push(line);
                             }
                         } else {
@@ -102,7 +100,7 @@ export default class PresetsSource {
 
     // executes the nested include by checking for an include directive
     #executeIncludeNested(strings) {
-        const isIncludeFound = this._PresetParser.isIncludeFound(strings);
+        const isIncludeFound = this.#presetParser.isIncludeFound(strings);
 
         if (isIncludeFound) {
             return this.#executeIncludeOnce(strings)
@@ -113,7 +111,7 @@ export default class PresetsSource {
     }
 
     loadPreset(preset) {
-        const promiseMainText = this.#loadPresetText(this._urlRaw + preset.fullPath);
+        const promiseMainText = this.#loadPresetText(this.#urlRaw + preset.fullPath);
 
         return promiseMainText
         .then(text => {
@@ -123,7 +121,7 @@ export default class PresetsSource {
         })
         .then(strings => this.#executeIncludeNested(strings))
         .then(strings => {
-            this._PresetParser.readPresetProperties(preset, strings);
+            this.#presetParser.readPresetProperties(preset, strings);
             return strings;
         })
         .then(strings => {
@@ -156,7 +154,7 @@ export default class PresetsSource {
         const loadPromises = [];
 
         fileUrls?.forEach(url => {
-            const filePath = this._urlRaw + url;
+            const filePath = this.#urlRaw + url;
             loadPromises.push(this.#loadPresetText(filePath));
         });
 

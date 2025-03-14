@@ -5,7 +5,6 @@ export default class PresetsSourceMetadata {
     #official = false;
     #active = false;
 
-
     constructor(name, url, branch = "") {
         this.#name = name;
         this.#url = url;
@@ -32,11 +31,23 @@ export default class PresetsSourceMetadata {
         return this.#branch;
     }
 
+    set branch(value) {
+        this.#branch = value;
+    }
+
     get name() {
         return this.#name;
     }
 
+    set name(value) {
+        this.#name = value;
+    }
+
     get url() {
         return this.#url;
+    }
+
+    set url(value) {
+        this.#url = value;
     }
 }
