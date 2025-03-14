@@ -1,6 +1,6 @@
-import PresetsRepoIndexed from "./PresetsRepoIndexed";
+import PresetsSource from "@/js/presets/sources/presets_source.js";
 
-export default class PresetsWebsiteRepo extends PresetsRepoIndexed {
+export default class PresetsSourceHttp extends PresetsSource {
     constructor(url, official, name) {
         let correctUrl = url.trim();
 

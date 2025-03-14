@@ -14,11 +14,11 @@ class FavoritePresetsData {
         this._favoritePresetsList = [];
     }
 
-    _sort() {
+    #sort() {
         this._favoritePresetsList.sort((a, b) => (a.lastPickDate - b.lastPickDate));
     }
 
-    _purgeOldPresets() {
+    #purgeOldPresets() {
         this._favoritePresetsList.splice(s_maxFavoritePresetsCount + 1, this._favoritePresetsList.length);
     }
 
@@ -45,8 +45,8 @@ class FavoritePresetsData {
         }
 
         preset.lastPickDate = Date.now();
-        this._sort();
-        this._purgeOldPresets();
+        this.#sort();
+        this.#purgeOldPresets();
 
         return preset;
     }
@@ -56,8 +56,8 @@ class FavoritePresetsData {
 
         if (index >= 0) {
             this._favoritePresetsList.splice(index, 1);
-            this._sort();
-            this._purgeOldPresets();
+            this.#sort();
+            this.#purgeOldPresets();
         }
     }
 

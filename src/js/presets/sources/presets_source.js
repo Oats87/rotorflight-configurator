@@ -1,12 +1,17 @@
-import PresetParser from "./PresetParser";
+import PresetParser from "@/js/presets/parser.js";
 
-export default class PresetsRepoIndexed {
-    constructor(urlRaw, urlViewOnline, official, name) {
+export default class PresetsSource {
+    constructor(metadata, urlRaw, urlViewOnline, official, name) {
+        this.presetsSourceMetadata = metadata;
         this._urlRaw = urlRaw;
         this._urlViewOnline = urlViewOnline;
         this._index = null;
         this._name = name;
         this._official = official;
+    }
+
+    get metadata() {
+        return this.presetsSourceMetadata;
     }
 
     get index() {
@@ -36,7 +41,7 @@ export default class PresetsRepoIndexed {
     }
     
     // parseInclude parses the given strings and adds promises generated _loadPresetText for each include
-    _parceInclude(strings, includeRowIndexes, promises)
+    #parseInclude(strings, includeRowIndexes, promises)
     {
            for (let i = 0; i < strings.length; i++) {
             const match = PresetParser._sRegExpInclude.exec(strings[i]);
@@ -44,7 +49,7 @@ export default class PresetsRepoIndexed {
             if (match !== null) {
                 includeRowIndexes.push(i);
                 const filePath = this._urlRaw + match.groups.filePath;
-                const promise = this._loadPresetText(filePath);
+                const promise = this.#loadPresetText(filePath);
                 promises.push(promise.then(text => {
                     let tmpStrings = text.split("\n");
                     tmpStrings = tmpStrings.map(str => str.trim());
@@ -64,7 +69,7 @@ export default class PresetsRepoIndexed {
         }
     }
 
-    _expandNestedStringsArray(strings) {
+    #expandNestedStringsArray(strings) {
         let i = 0;
         while (i < strings.length) {
           if (Array.isArray(strings[i])) {
@@ -77,10 +82,10 @@ export default class PresetsRepoIndexed {
       }
 
     // executes the include and inserts it
-    _executeIncludeOnce(strings) {
+    #executeIncludeOnce(strings) {
         const includeRowIndexes = []; // row indexes with "#include" statements
         const promises = []; // promises to load included files
-        this._parceInclude(strings, includeRowIndexes, promises);
+        this.#parseInclude(strings, includeRowIndexes, promises);
 
         return Promise.all(promises)
             .then(includedTexts => {
@@ -88,7 +93,7 @@ export default class PresetsRepoIndexed {
                     strings[includeRowIndexes[i]] = includedTexts[i];
                 }
                 // Expand the included file into its spot in the resultant file
-                strings = this._expandNestedStringsArray(strings);
+                strings = this.#expandNestedStringsArray(strings);
 
                 const text = strings.join('\n');
                 return text.split("\n").map(str => str.trim());
@@ -96,19 +101,19 @@ export default class PresetsRepoIndexed {
     }
 
     // executes the nested include by checking for an include directive
-    _executeIncludeNested(strings) {
+    #executeIncludeNested(strings) {
         const isIncludeFound = this._PresetParser.isIncludeFound(strings);
 
         if (isIncludeFound) {
-            return this._executeIncludeOnce(strings)
-            .then(resultStrings => this._executeIncludeNested(resultStrings));
+            return this.#executeIncludeOnce(strings)
+            .then(resultStrings => this.#executeIncludeNested(resultStrings));
         } else {
             return Promise.resolve(strings);
         }
     }
 
     loadPreset(preset) {
-        const promiseMainText = this._loadPresetText(this._urlRaw + preset.fullPath);
+        const promiseMainText = this.#loadPresetText(this._urlRaw + preset.fullPath);
 
         return promiseMainText
         .then(text => {
@@ -116,18 +121,18 @@ export default class PresetsRepoIndexed {
             strings = strings.map(str => str.trim());
             return strings;
         })
-        .then(strings => this._executeIncludeNested(strings))
+        .then(strings => this.#executeIncludeNested(strings))
         .then(strings => {
             this._PresetParser.readPresetProperties(preset, strings);
             return strings;
         })
         .then(strings => {
             preset.originalPresetCliStrings = strings;
-            return this._loadPresetWarning(preset);
+            return this.#loadPresetWarning(preset);
         });
     }
 
-    _loadPresetWarning(preset) {
+    #loadPresetWarning(preset) {
         let completeWarning = "";
 
         if (preset.warning) {
@@ -140,19 +145,19 @@ export default class PresetsRepoIndexed {
 
         const allFiles = [].concat(...[preset.include_warning, preset.include_disclaimer].filter(Array.isArray));
 
-        return this._loadFilesInOneText(allFiles)
+        return this.#loadFilesInOneText(allFiles)
             .then(text => {
                 completeWarning += (completeWarning?"\n":"") + text;
                 preset.completeWarning = completeWarning;
             });
     }
 
-    _loadFilesInOneText(fileUrls) {
+    #loadFilesInOneText(fileUrls) {
         const loadPromises = [];
 
         fileUrls?.forEach(url => {
             const filePath = this._urlRaw + url;
-            loadPromises.push(this._loadPresetText(filePath));
+            loadPromises.push(this.#loadPresetText(filePath));
         });
 
         return Promise.all(loadPromises)
@@ -161,7 +166,7 @@ export default class PresetsRepoIndexed {
         });
     }
 
-    _loadPresetText(fullUrl) {
+    #loadPresetText(fullUrl) {
         return new Promise((resolve, reject) => {
             console.log("Fetching URL: "+fullUrl);
             fetch(fullUrl, {cache: "no-cache"})

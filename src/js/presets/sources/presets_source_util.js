@@ -1,11 +1,4 @@
-export default class PresetSource {
-    constructor(name, url, gitHubBranch = "") {
-        this.name = name;
-        this.url = url;
-        this.gitHubBranch = gitHubBranch;
-        this.official = false;
-    }
-
+export default class PresetsSourceUtil {
     static isUrlGithubRepo(url) {
         return url.trim().toLowerCase().startsWith("https://github.com/");
     }
@@ -15,9 +8,9 @@ export default class PresetSource {
     }
 
     static getBranchName(url) {
-        const pattern = /https:\/\/github\.com\/[^\/]+\/[^\/]+\/tree\/([^\/]+)/;
+        const pattern = /https:\/\/github\.com\/[^/]+\/[^/]+\/tree\/([^/]+)/;
         const match = url.match(pattern);
 
         return match ? match[1] : null;
-    }
+    }   
 }

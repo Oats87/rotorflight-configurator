@@ -1,9 +1,8 @@
-
-
-const util = require('util');
 export default class PresetParser {
+    #settings;
+
     constructor(settings) {
-        this._settings = settings;
+        this.#settings = settings;
     }
 
     // This parses a presets properties
@@ -26,24 +25,24 @@ export default class PresetParser {
         propertiesToRead.forEach(propertyName => {
             // metadata of each property, name, type, optional true/false; example:
             // keywords: {type: MetadataTypes.WORDS_ARRAY, optional: true}
-            propertiesMetadata[propertyName] = this._settings.presetsFileMetadata[propertyName];
+            propertiesMetadata[propertyName] = this.#settings.presetsFileMetadata[propertyName];
             preset[propertyName] = undefined;
         });
 
         // when parsing options, need to keep track of the current option using a temporary variable
-        preset._currentOptionGroup = undefined;
+        preset.currentOptionGroup = undefined;
 
         for (const line of strings) {
-            if (this._lineStartsWithMetapropertyDirective(line)) {
-                this._parseAttributeLine(preset, line, propertiesMetadata);
+            if (this.#lineStartsWithMetapropertyDirective(line)) {
+                this.#parseAttributeLine(preset, line, propertiesMetadata);
             }
         }
 
-        delete preset._currentOptionGroup;
+        delete preset.currentOptionGroup;
     }
 
-    _parseAttributeLine(preset, line, propertiesMetadata) {
-        line = this._trimMetapropertyDirective(line);
+    #parseAttributeLine(preset, line, propertiesMetadata) {
+        line = this.#trimMetapropertyDirective(line);
         const lowCaseLine = line.toLowerCase();
         let isProperty = false;
 
@@ -52,47 +51,47 @@ export default class PresetParser {
 
             if (lowCaseLine.startsWith(lineBeginning)) {
                 line = line.slice(lineBeginning.length).trim(); // (Title: foo) -> (foo)
-                this._parseProperty(preset, line, propertyName);
+                this.#parseProperty(preset, line, propertyName);
                 isProperty = true;
             }
         }
 
-        if (!isProperty && lowCaseLine.startsWith(this._settings.OptionsDirectives.OPTION_DIRECTIVE)) {
-            this._parseOptionDirective(preset, line);
+        if (!isProperty && lowCaseLine.startsWith(this.#settings.OptionsDirectives.OPTION_DIRECTIVE)) {
+            this.#parseOptionDirective(preset, line);
         }
     }
 
-    _parseProperty(preset, line, propertyName) {
-        switch(this._settings.presetsFileMetadata[propertyName].type) {
-            case this._settings.MetadataTypes.STRING_ARRAY:
-                this._processArrayProperty(preset, line, propertyName);
+    #parseProperty(preset, line, propertyName) {
+        switch(this.#settings.presetsFileMetadata[propertyName].type) {
+            case this.#settings.MetadataTypes.STRING_ARRAY:
+                this.#processArrayProperty(preset, line, propertyName);
                 break;
-            case this._settings.MetadataTypes.STRING:
-                this._processStringProperty(preset, line, propertyName);
+            case this.#settings.MetadataTypes.STRING:
+                this.#processStringProperty(preset, line, propertyName);
                 break;
-            case this._settings.MetadataTypes.FILE_PATH:
-                this._processStringProperty(preset, line, propertyName);
+            case this.#settings.MetadataTypes.FILE_PATH:
+                this.#processStringProperty(preset, line, propertyName);
                 break;
-            case this._settings.MetadataTypes.FILE_PATH_ARRAY:
-                this._processArrayProperty(preset, line, propertyName);
+            case this.#settings.MetadataTypes.FILE_PATH_ARRAY:
+                this.#processArrayProperty(preset, line, propertyName);
                 break;
-            case this._settings.MetadataTypes.BOOLEAN:
-                this._processBooleanProperty(preset, line, propertyName);
+            case this.#settings.MetadataTypes.BOOLEAN:
+                this.#processBooleanProperty(preset, line, propertyName);
                 break;
-            case this._settings.MetadataTypes.PARSER:
-                this._processParserProperty(preset, line, propertyName);
+            case this.#settings.MetadataTypes.PARSER:
+                this.#processParserProperty(preset, line, propertyName);
                 break;
             default:
-                this.console.err(`Parsing preset: unknown property type '${this._settings.presetsFileMetadata[propertyName].type}' for the property '${propertyName}'`);
+                this.console.err(`Parsing preset: unknown property type '${this.#settings.presetsFileMetadata[propertyName].type}' for the property '${propertyName}'`);
         }
     }
 
-    _processParserProperty(preset, line, propertyName)
+    #processParserProperty(preset, line, propertyName)
     {
         preset[propertyName] = line;
     }
 
-    _processBooleanProperty(preset, line, propertyName) {
+    #processBooleanProperty(preset, line, propertyName) {
         const trueValues = ["true", "yes"];
 
         const lineLowCase = line.toLowerCase();
@@ -105,7 +104,7 @@ export default class PresetParser {
         preset[propertyName] = result;
     }
 
-    _processArrayProperty(preset, line, propertyName) {
+    #processArrayProperty(preset, line, propertyName) {
         if (!preset[propertyName]) {
             preset[propertyName] = [];
         }
@@ -113,82 +112,82 @@ export default class PresetParser {
         preset[propertyName].push(line);
     }
 
-    _processStringProperty(preset, line, propertyName) {
+    #processStringProperty(preset, line, propertyName) {
         preset[propertyName] = line;
     }
 
     // Checks to see if a line has a #$
-    _lineStartsWithMetapropertyDirective(line) {
-        return line.trim().startsWith(this._settings.MetapropertyDirective);
+    #lineStartsWithMetapropertyDirective(line) {
+        return line.trim().startsWith(this.#settings.MetapropertyDirective);
     }
 
     // Strips the #$ from the front of a line i.e. (#$ DESCRIPTION: foo) -> (DESCRIPTION: foo)
-    _trimMetapropertyDirective(line) {
-        return line.trim().slice(this._settings.MetapropertyDirective.length).trim();
+    #trimMetapropertyDirective(line) {
+        return line.trim().slice(this.#settings.MetapropertyDirective.length).trim();
     }
 
-    _trimExclusiveDirective(line) {
-        const exclusiveDirectiveLength = exlusiveDirective.length;
-        return line.slice(lowercaseLine.lastIndexOf(exlusiveDirective) + exclusiveDirectiveLength - 1).trim();
-    }
+    // #trimExclusiveDirective(line) {
+    //     const exclusiveDirectiveLength = exlusiveDirective.length;
+    //     return line.slice(lowercaseLine.lastIndexOf(exlusiveDirective) + exclusiveDirectiveLength - 1).trim();
+    // }
 
     // Start option parsing, accepts a trimmed line without the metaproperty directive
-    _parseOptionDirective(preset, line) {
-        let currentOptionGroupName = "" 
-        if (preset._currentOptionGroup) {
-            currentOptionGroupName = preset._currentOptionGroup.name
+    #parseOptionDirective(preset, line) {
+        let currentOptionGroupName = "";
+        if (preset.currentOptionGroup) {
+            currentOptionGroupName = preset.currentOptionGroup.name;
         }
 
-        if (this._isOptionBegin(line)) {
-            const option = this._getOption(line, currentOptionGroupName);
-            if (!preset._currentOptionGroup) {
+        if (this.#isOptionBegin(line)) {
+            const option = this.#getOption(line, currentOptionGroupName);
+            if (!preset.currentOptionGroup) {
                 preset.options.push(option);
             } else {
-                preset._currentOptionGroup.options.push(option);
+                preset.currentOptionGroup.options.push(option);
             }
-        } else if (this._isOptionGroupBegin(line)) {
-            const optionGroup = this._getOptionGroup(line);
-            preset._currentOptionGroup = optionGroup;
+        } else if (this.#isOptionGroupBegin(line)) {
+            const optionGroup = this.#getOptionGroup(line);
+            preset.currentOptionGroup = optionGroup;
             preset.options.push(optionGroup);
-        } else if (this._isOptionGroupEnd(line)) {
-            preset._currentOptionGroup = undefined;
+        } else if (this.#isOptionGroupEnd(line)) {
+            preset.currentOptionGroup = undefined;
         }
     }
 
-    _getOptionName(line) {
-        const directiveRemoved = line.slice(this._settings.OptionsDirectives.BEGIN_OPTION_DIRECTIVE.length).trim();
-        const regExpRemoveChecked = new RegExp(this._escapeRegex(`${this._settings.OptionsDirectives.OPTION_CHECKED}:`), 'gi');
-        const regExpRemoveUnchecked = new RegExp(this._escapeRegex(`${this._settings.OptionsDirectives.OPTION_UNCHECKED}:`), 'gi');
+    #getOptionName(line) {
+        const directiveRemoved = line.slice(this.#settings.OptionsDirectives.BEGIN_OPTION_DIRECTIVE.length).trim();
+        const regExpRemoveChecked = new RegExp(this.#escapeRegex(`${this.#settings.OptionsDirectives.OPTION_CHECKED}:`), 'gi');
+        const regExpRemoveUnchecked = new RegExp(this.#escapeRegex(`${this.#settings.OptionsDirectives.OPTION_UNCHECKED}:`), 'gi');
         let optionName = directiveRemoved.replace(regExpRemoveChecked, "");
         optionName = optionName.replace(regExpRemoveUnchecked, "").trim();
         return optionName;
     }
 
-    _getOptionGroupName(line) {
-        let ogName = line.slice(this._settings.OptionsDirectives.BEGIN_OPTION_GROUP_DIRECTIVE.length+1).trim();
-        if (this._isExclusiveOptionGroup(line)) {
-            ogName = ogName.slice(this._settings.OptionsDirectives.EXCLUSIVE_OPTION_GROUP.length).trim();
+    #getOptionGroupName(line) {
+        let ogName = line.slice(this.#settings.OptionsDirectives.BEGIN_OPTION_GROUP_DIRECTIVE.length+1).trim();
+        if (this.#isExclusiveOptionGroup(line)) {
+            ogName = ogName.slice(this.#settings.OptionsDirectives.EXCLUSIVE_OPTION_GROUP.length).trim();
         }
         return ogName;
     }
 
     // returns an object that represents the option group
-    _getOptionGroup(line) {
+    #getOptionGroup(line) {
         return {
-            name: this._getOptionGroupName(line),
+            name: this.#getOptionGroupName(line),
             options: [],
-            isExclusive: this._isExclusiveOptionGroup(line),
+            isExclusive: this.#isExclusiveOptionGroup(line),
         };
     }
 
     // returns an object that represents an option
-    _getOption(line, optionGroup) {
-        const directiveRemoved = line.slice(this._settings.OptionsDirectives.BEGIN_OPTION_DIRECTIVE.length).trim();
+    #getOption(line, optionGroup) {
+        const directiveRemoved = line.slice(this.#settings.OptionsDirectives.BEGIN_OPTION_DIRECTIVE.length).trim();
         const directiveRemovedLowCase = directiveRemoved.toLowerCase();
-        const OptionChecked = this._isOptionChecked(directiveRemovedLowCase);
+        const OptionChecked = this.#isOptionChecked(directiveRemovedLowCase);
 
-        const regExpRemoveChecked = new RegExp(this._escapeRegex(this._settings.OptionsDirectives.OPTION_CHECKED), 'gi');
-        const regExpRemoveUnchecked = new RegExp(this._escapeRegex(this._settings.OptionsDirectives.OPTION_UNCHECKED), 'gi');
+        const regExpRemoveChecked = new RegExp(this.#escapeRegex(this.#settings.OptionsDirectives.OPTION_CHECKED), 'gi');
+        const regExpRemoveUnchecked = new RegExp(this.#escapeRegex(this.#settings.OptionsDirectives.OPTION_UNCHECKED), 'gi');
         let optionName = directiveRemoved.replace(regExpRemoveChecked, "");
         optionName = optionName.replace(regExpRemoveUnchecked, "").trim();
 
@@ -199,37 +198,37 @@ export default class PresetParser {
         };
     }
 
-    _isExclusiveOptionGroup(line) {
+    #isExclusiveOptionGroup(line) {
         const lowCaseLine = line.toLowerCase();
-        return lowCaseLine.includes(this._settings.OptionsDirectives.EXCLUSIVE_OPTION_GROUP);
+        return lowCaseLine.includes(this.#settings.OptionsDirectives.EXCLUSIVE_OPTION_GROUP);
     }
 
-    _isOptionChecked(lowCaseLine) {
-        return lowCaseLine.includes(this._settings.OptionsDirectives.OPTION_CHECKED);
+    #isOptionChecked(lowCaseLine) {
+        return lowCaseLine.includes(this.#settings.OptionsDirectives.OPTION_CHECKED);
     }
 
-    _isOptionGroupBegin(line) {
+    #isOptionGroupBegin(line) {
         const lowCaseLine = line.toLowerCase();
-        return lowCaseLine.startsWith(this._settings.OptionsDirectives.BEGIN_OPTION_GROUP_DIRECTIVE);
+        return lowCaseLine.startsWith(this.#settings.OptionsDirectives.BEGIN_OPTION_GROUP_DIRECTIVE);
     }
 
-    _isOptionGroupEnd(line) {
+    #isOptionGroupEnd(line) {
         const lowCaseLine = line.toLowerCase();
-        return lowCaseLine.startsWith(this._settings.OptionsDirectives.END_OPTION_GROUP_DIRECTIVE);
+        return lowCaseLine.startsWith(this.#settings.OptionsDirectives.END_OPTION_GROUP_DIRECTIVE);
     }
 
-    _isOptionBegin(line) {
+    #isOptionBegin(line) {
         const lowCaseLine = line.toLowerCase();
-        return lowCaseLine.startsWith(this._settings.OptionsDirectives.BEGIN_OPTION_DIRECTIVE);
+        return lowCaseLine.startsWith(this.#settings.OptionsDirectives.BEGIN_OPTION_DIRECTIVE);
     }
 
-    _isOptionEnd(line) {
+    #isOptionEnd(line) {
         const lowCaseLine = line.toLowerCase();
-        return lowCaseLine.startsWith(this._settings.OptionsDirectives.END_OPTION_DIRECTIVE);
+        return lowCaseLine.startsWith(this.#settings.OptionsDirectives.END_OPTION_DIRECTIVE);
     }
 
-    _escapeRegex(string) {
-        return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    #escapeRegex(string) {
+        return string.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
     }
 
     renderPreset(strings, checkedOptions) {
@@ -243,18 +242,18 @@ export default class PresetParser {
 
         strings.forEach(str => {
             //console.log("Line optiongroup: " + currentOptionGroupName + " val: " + str)
-            if (this._lineStartsWithMetapropertyDirective(str)) {
-                const line = this._trimMetapropertyDirective(str);
-                if (this._isOptionGroupBegin(line)) {
+            if (this.#lineStartsWithMetapropertyDirective(str)) {
+                const line = this.#trimMetapropertyDirective(str);
+                if (this.#isOptionGroupBegin(line)) {
                     handlingOption = true;
-                    currentOptionGroupName = this._getOptionGroupName(line).toLowerCase();
-                } else if (this._isOptionGroupEnd(line)) {
+                    currentOptionGroupName = this.#getOptionGroupName(line).toLowerCase();
+                } else if (this.#isOptionGroupEnd(line)) {
                     handlingOption = false;
                     includeOption = false;
                     currentOptionGroupName = "";
-                } else if (this._isOptionBegin(line)) {
+                } else if (this.#isOptionBegin(line)) {
                     handlingOption = true;
-                    let optionNameLowCase = this._getOptionName(line).toLowerCase();
+                    let optionNameLowCase = this.#getOptionName(line).toLowerCase();
                     if (currentOptionGroupName != "") {
                         optionNameLowCase = currentOptionGroupName.toLowerCase() + ":" + optionNameLowCase;
                     }
@@ -262,7 +261,7 @@ export default class PresetParser {
                         //console.log("option name: " + optionNameLowCase + " is being included!")
                         includeOption = true;
                     }
-                } else if (this._isOptionEnd(line)) {
+                } else if (this.#isOptionEnd(line)) {
                     if (currentOptionGroupName == "") {
                         handlingOption = false;
                     }
@@ -274,12 +273,12 @@ export default class PresetParser {
             }
         });
 
-        resultStrings = this._removeExcessiveEmptyLines(resultStrings);
+        resultStrings = this.#removeExcessiveEmptyLines(resultStrings);
 
         return resultStrings;
     }
 
-    _removeExcessiveEmptyLines(strings) {
+    #removeExcessiveEmptyLines(strings) {
         // removes empty lines if there are two or more in a row leaving just one empty line
         const result = [];
         let lastStringEmpty = false;

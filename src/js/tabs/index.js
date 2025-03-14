@@ -3,7 +3,6 @@ import "./auxiliary.js";
 import "./beepers.js";
 import "./blackbox.js";
 import "./cli.js";
-import "./presets/presets.js"
 import "./configuration.js";
 import "./failsafe.js";
 import "./firmware_flasher.js";
@@ -15,7 +14,7 @@ import "./led_strip.js";
 import "./mixer.js";
 import "./motors.js";
 import "./options.js";
-import "./presets/presets.js";
+import "./presets.js";
 import "./power.js";
 import "./privacy_policy.js";
 import "./profiles.js";

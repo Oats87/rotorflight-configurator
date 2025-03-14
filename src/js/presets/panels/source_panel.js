@@ -1,4 +1,4 @@
-import PresetSource from "./PresetSource";
+import PresetsSourceUtil from "@/js/presets/sources/presets_source_util.js";
 
 export default class SourcePanel {
     constructor(parentDiv, presetSource) {
@@ -138,14 +138,14 @@ export default class SourcePanel {
     }
 
     _checkIfGithub() {
-        const isGithubUrl = PresetSource.isUrlGithubRepo(this._domEditUrl.val());
+        const isGithubUrl = PresetsSourceUtil.isUrlGithubRepo(this._domEditUrl.val());
         this._domDivGithubBranch.toggle(isGithubUrl);
     }
 
     _onInputChange() {
         this._checkIfGithub();
-        if (PresetSource.containsBranchName(this._domEditUrl.val())) {
-            this._domEditGitHubBranch.val(PresetSource.getBranchName(this._domEditUrl.val()));
+        if (PresetsSourceUtil.containsBranchName(this._domEditUrl.val())) {
+            this._domEditGitHubBranch.val(PresetsSourceUtil.getBranchName(this._domEditUrl.val()));
             this._domEditUrl.val(this._domEditUrl.val().split("/tree/")[0]);
         }
         this._setIsSaved(false);

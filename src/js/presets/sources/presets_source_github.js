@@ -1,6 +1,6 @@
-import PresetsRepoIndexed from "./PresetsRepoIndexed";
+import PresetsSource from "@/js/presets/sources/presets_source.js";
 
-export default class PresetsGithubRepo extends PresetsRepoIndexed {
+export default class PresetsSourceGithub extends PresetsSource {
     constructor(urlRepo, branch, official, name) {
         let correctUrlRepo = urlRepo.trim();
 
