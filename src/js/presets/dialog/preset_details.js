@@ -77,7 +77,7 @@ export default class PresetsDetailsDialog {
 
     #getFinalCliText() {
         const optionsToInclude = this.#dom.optionsSelect.multipleSelect("getSelects", "value");
-        return this.#presetsSource._PresetParser.renderPreset(this.#preset.originalPresetCliStrings, optionsToInclude);
+        return this.#presetsSource.parser.renderPreset(this.#preset.originalPresetCliStrings, optionsToInclude);
     }
 
     #loadPresetUi() {

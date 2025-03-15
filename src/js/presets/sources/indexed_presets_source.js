@@ -1,41 +1,47 @@
 import PresetParser from "@/js/presets/parser.js";
 
-export default class PresetsSource {
-    #presetsSourceMetadata;
-    #urlRaw;
-    #urlViewOnline;
+export default class IndexedPresetsSource {
+    #rawUrl;
+    #viewUrl;
+
     #index;
 
     #presetParser;
 
-    constructor(metadata, urlRaw, urlViewOnline) {
-        this.#presetsSourceMetadata = metadata;
-        this.#urlRaw = urlRaw;
-        this.#urlViewOnline = urlViewOnline;
-        this.#index = null;
-    }
+    constructor(rawUrl, viewUrl) {
 
-    get metadata() {
-        return this.#presetsSourceMetadata;
+        this.#rawUrl = rawUrl.trim();
+        if (!this.#rawUrl.endsWith("/")) {
+            this.#rawUrl += "/";
+        }
+
+        this.#viewUrl = viewUrl.trim();
+        if (!this.#viewUrl.endsWith("/")) {
+            this.#viewUrl += "/";
+        }
+        this.#index = null;
     }
 
     get index() {
         return this.#index;
     }
 
+    get parser() {
+        return this.#presetParser;
+    }
+
     loadIndex() {
-        console.log("Fetching: "+this.#urlRaw+"index.json");
-        return fetch(`${this.#urlRaw}index.json`, {cache: "no-cache"})
+        console.log("Fetching: "+this.#rawUrl+"index.json");
+        return fetch(`${this.#rawUrl}index.json`, {cache: "no-cache"})
             .then(res => res.json())
             .then(out => {
                 this.#index = out;
-                console.log(this.#index.settings);
                 this.#presetParser = new PresetParser(this.#index.settings);
             });
     }
 
     getPresetOnlineLink(preset) {
-        return this.#urlViewOnline + preset.fullPath;
+        return this.#viewUrl + preset.fullPath;
     }
     
     // parseInclude parses the given strings and adds promises generated _loadPresetText for each include
@@ -46,7 +52,7 @@ export default class PresetsSource {
 
             if (match !== null) {
                 includeRowIndexes.push(i);
-                const filePath = this.#urlRaw + match.groups.filePath;
+                const filePath = this.#rawUrl + match.groups.filePath;
                 const promise = this.#loadPresetText(filePath);
                 promises.push(promise.then(text => {
                     let tmpStrings = text.split("\n");
@@ -111,7 +117,7 @@ export default class PresetsSource {
     }
 
     loadPreset(preset) {
-        const promiseMainText = this.#loadPresetText(this.#urlRaw + preset.fullPath);
+        const promiseMainText = this.#loadPresetText(this.#rawUrl + preset.fullPath);
 
         return promiseMainText
         .then(text => {
@@ -154,7 +160,7 @@ export default class PresetsSource {
         const loadPromises = [];
 
         fileUrls?.forEach(url => {
-            const filePath = this.#urlRaw + url;
+            const filePath = this.#rawUrl + url;
             loadPromises.push(this.#loadPresetText(filePath));
         });
 

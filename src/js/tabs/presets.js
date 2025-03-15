@@ -1,11 +1,8 @@
 import CliEngine from '@/js/cli_engine.js';
 import PickedPreset from '@/js/presets/picked_preset.js';
 import PresetsDetailsDialog from '@/js/presets/dialog/preset_details.js';
-import PresetsGithubRepo from '@/js/presets/sources/presets_source_github.js';
-import PresetsSourceHttp from '@/js/presets/sources/presets_source_http.js';
 import PresetTitlePanel from '@/js/presets/panels/title_panel.js';
 import PresetsSourcesDialog from '@/js/presets/dialog/presets_sources.js';
-import PresetsSourceUtil from '@/js/presets/sources/presets_source_util.js';
 import FavoritePresetsClass from '@/js/presets/favorites.js';
 
 const COMMAND_DIFF_ALL = "diff all";
@@ -445,6 +442,7 @@ class PresetsTab {
 
         await this.presetsDetailedDialog.load();
         await this.presetsSourcesDialog.load();
+        console.log("loaded");
         this.tryLoadPresets();
         GUI.content_ready(callback);
     };
@@ -474,20 +472,21 @@ class PresetsTab {
     };
 
     reload() {
+        console.log("Reload");
         this.resetInitialValues();
         this.tryLoadPresets();
     };
 
     tryLoadPresets() {
-        const activePresetSourcesMetadata = this.presetsSourcesDialog.getActivePresetSources();
+        const activeSources = this.presetsSourcesDialog.collectActiveSources();
+        console.log(activeSources);
+        this.presetsSources = [];
+        for (let i = 0; i < activeSources.length; i++) {
+            console.log(activeSources[i]);
+            this.presetsSources.push(activeSources[i].indexedPresetsSource);
+        }
 
-        this.presetsSources = activePresetSourcesMetadata.map(sourceMetadata => {
-            if (PresetsSourceUtil.isUrlGithubRepo(sourceMetadata.url)) {
-                return new PresetsGithubRepo(sourceMetadata);
-            } else {
-                return new PresetsSourceHttp(sourceMetadata);
-            }
-        });
+        console.log(this.presetsSources);
 
         this.divMainContent.toggle(false);
         this.divGlobalLoadingError.toggle(false);
@@ -496,7 +495,7 @@ class PresetsTab {
 
         const failedToLoad = [];
 
-        Promise.all(this.presetsSources.map(p => p.loadIndex().catch((failedToLoad.push(p)))))
+        Promise.all(this.presetsSources.map(p => p.loadIndex().catch(p => {failedToLoad.push(p);})))
             .then(() => {
                 this.domWarningFailedToLoadRepositories.toggle(failedToLoad.length > 0);
                 this.domWarningFailedToLoadRepositories.html(i18n.getMessage("presetsFailedToLoadRepositories", { "repos": failedToLoad.map(repo => repo.metadata.name).join(", ") }));

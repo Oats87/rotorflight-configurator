@@ -1,219 +1,236 @@
-import PresetsSourceUtil from "@/js/presets/sources/presets_source_util.js";
+import PresetsSourceGithubUtil from "@/js/presets/sources/presets_source_util.js";
+import IndexedPresetsSource from "@/js/presets/sources/indexed_presets_source.js";
 
 export default class SourcePanel {
     
-    #dom = {};
+    #metadata;
+    #metadataEdited = false;
+
+    #presetsIndex = null;
+
+    #dom = {
+        divWrapper: null,
+
+        divInnerPanel: null,
+        divNoEditing: null,
+        divEditing: null,
+
+        editName: null,
+        editUrl: null,
+        editGitHubBranch: null,
+
+        buttonSave: null,
+        buttonReset: null,
+        buttonActivate: null,
+        buttonDeactivate: null,
+        buttonDelete: null,
+        divGithubBranch: null,
+        divNoEditingName: null,
+
+        divSelectedIndicator: null,
+    };
+    #callbacks = {
+        sourceChanged: null,
+    };
     #domId = "";
+    #selected = null;
 
     #parentDiv;
-    #presetsSourceMetadata;
 
     constructor(parentDiv, presetSourceMetadata) {
         this.#parentDiv = parentDiv;
-        this.#presetsSourceMetadata = presetSourceMetadata;
+        this.#metadata = presetSourceMetadata;
     }
 
     get presetsSourceMetadata() {
-        return this.#presetsSourceMetadata;
+        return this.#metadata;
     }
 
     load() {
+        return new Promise(() => {
+            console.log("loading source panel");
         SourcePanel.s_panelCounter++;
         this.#domId = `source_panel_${SourcePanel.s_panelCounter}`;
+        console.log("adding for dom ID: " + this.#domId);
         this.#parentDiv.append(`<div id="${this.#domId}"></div>`);
         this.#dom.divWrapper = $(`#${this.#domId}`);
         this.#dom.divWrapper.toggle(false);
-
-        return new Promise(resolve => {
-            this.#dom.divWrapper.load("./tabs/presets/SourcesDialog/SourcePanel.html",
-            () => {
-                this.#setupHtml();
-                resolve();
-            });
-        });
+        }).then(this.#dom.divWrapper.load("./tabs/presets/SourcesDialog/SourcePanel.html")).then(() => { this.#setupHtml(); });
     }
 
-    setOnSelectedCallback(onSelectedCallback) {
-        // callback with this (SourcePanel) argument
-        // so that consumer knew which panel was clicked on
-        this._onSelectedCallback = onSelectedCallback;
-    }
-
-    setOnDeleteCallback(onDeletedCallback) {
-        // callback with this (SourcePanel) argument
-        // so that consumer knew which panel was clicked on
-        this._onDeletedCallback = onDeletedCallback;
-    }
-
-    setOnActivateCallback(onActivateCallback) {
-        // callback with this (SourcePanel) argument
-        // so that consumer knew which panel was clicked on
-        this._onActivateCallback = onActivateCallback;
-    }
-
-    setOnDeactivateCallback(onDeactivateCallback) {
-        // callback with this (SourcePanel) argument
-        // so that consumer knew which panel was clicked on
-        this._onDeactivateCallback = onDeactivateCallback;
-    }
-
-    setOnSaveCallback(onSaveCallback) {
-        // callback with this (SourcePanel) argument
-        // so that consumer knew which panel was clicked on
-        this._onSaveCallback = onSaveCallback;
-    }
-
-    setSelected(isSelected) {
-        this._setUiSelected(isSelected);
-    }
-
-    setActive(isActive) {
-        this.#presetsSourceMetadata.active = isActive;
-        this._domDivSelectedIndicator.toggle(this.#presetsSourceMetadata.active);
-        this._domButtonActivate.toggle(!isActive);
-        this._domButtonDeactivate.toggle(isActive);
-    }
-
-    _setUiOfficial() {
-        if (this.#presetsSourceMetadata.official){
-            this._domButtonSave.toggle(false);
-            this._domButtonReset.toggle(false);
-            this._domButtonDelete.toggle(false);
-            this._domEditName.prop("disabled", true);
-            this._domEditUrl.prop("disabled", true);
-            this._domEditGitHubBranch.prop("disabled", true);
+    #loadIndex() {
+        let rawUrl = this.#metadata.url;
+        console.log("loading index");
+        let viewUrl = this.#metadata.url;
+        console.log("rawURL: "+rawUrl+" viewURL: "+viewUrl);
+        if (PresetsSourceGithubUtil.isUrlGithubRepo(this.#metadata.url)) {
+            ({rawUrl, viewUrl} = PresetsSourceGithubUtil.getUrlsForGithub(this.#metadata.url, this.#metadata.branch));
         }
+        console.log("rawURL: "+rawUrl+" viewURL: "+viewUrl);
+
+        this.#presetsIndex = new IndexedPresetsSource(rawUrl, viewUrl);
     }
 
-    _setUiSelected(isSelected) {
-        if (this._selected !== isSelected) {
-            this._domDivNoEditing.toggle(!isSelected);
-            this._domDivEditing.toggle(isSelected);
+    get indexedPresetsSource() {
+        return this.#presetsIndex;
+    }
+
+    set sourceChangedCallback(sourceChangedCallback) {
+        this.#callbacks.sourceChanged = sourceChangedCallback;
+    }
+
+    set selected(isSelected) {
+        if (this.#selected !== isSelected) {
+            this.#dom.divNoEditing.toggle(!isSelected);
+            this.#dom.divEditing.toggle(isSelected);
 
             this._onResetButtonClick();
-            this._updateNoEditingName();
+            this.#dom.divNoEditingName.text(this.#metadata.name);
 
-            this._domDivInnerPanel.toggleClass("presets_source_panel_not_selected", !isSelected);
-            this._domDivInnerPanel.toggleClass("presets_source_panel_selected", isSelected);
+            this.#dom.divInnerPanel.toggleClass("presets_source_panel_not_selected", !isSelected);
+            this.#dom.divInnerPanel.toggleClass("presets_source_panel_selected", isSelected);
             if (isSelected) {
-                this._domDivInnerPanel.off("click");
+                this.#dom.divInnerPanel.off("click");
             } else {
-                this._domDivInnerPanel.on("click", () => this._onPanelSelected());
+                this.#dom.divInnerPanel.on("click", () => this.#onPanelSelected());
             }
 
-            this._selected = isSelected;
+            this.#selected = isSelected;
         }
     }
 
-    _updateNoEditingName() {
-        this._domDivNoEditingName.text(this.#presetsSourceMetadata.name);
+    set metadataEdited(edited) {
+        this.#metadataEdited = edited;
+        if (this.#metadataEdited) {
+            this.#dom.buttonSave.removeClass(GUI.buttonDisabledClass);
+            this.#dom.buttonReset.removeClass(GUI.buttonDisabledClass);
+        } else {
+            this.#dom.buttonSave.addClass(GUI.buttonDisabledClass);
+            this.#dom.buttonReset.addClass(GUI.buttonDisabledClass);
+        }
     }
 
+    set active(active) {
+        this.#metadata.active = active;
+        this.#dom.divSelectedIndicator.toggle(active);
+        this.#dom.buttonActivate.toggle(!active);
+        this.#dom.buttonDeactivate.toggle(active);
+        if (active) {
+            this.#loadIndex();
+        }
+    }
+
+
     #setupHtml() {
-        this._readDom();
-        this._setupActions();
-        this.setSelected(false);
-        this._setIsSaved(true);
+        console.log("setting up html");
+        this.#readDom();
+        this.#setupActions();
+        this.selected = false;
+        this.metadataEdited = false;
         this._checkIfGithub();
-        this.setActive(this.#presetsSourceMetadata.active);
-        this._setUiOfficial();
+        this.active = this.#metadata.active;
+
+        if (this.#metadata.official){
+            this.active = true;
+            console.log("Official source activated");
+            this.#dom.buttonSave.toggle(false);
+            this.#dom.buttonReset.toggle(false);
+            this.#dom.buttonDelete.toggle(false);
+            this.#dom.buttonActivate.toggle(false);
+            this.#dom.buttonDeactivate.toggle(false);
+            this.#dom.editName.prop("disabled", true);
+            this.#dom.editUrl.prop("disabled", true);
+            this.#dom.editGitHubBranch.prop("disabled", true);
+        }
 
         i18n.localizePage();
         this.#dom.divWrapper.toggle(true);
     }
 
-    _setupActions() {
-        this._domButtonSave.on("click", () => this._onSaveButtonClick());
-        this._domButtonReset.on("click", () => this._onResetButtonClick());
-        this._domButtonDelete.on("click", () => this._onDeleteButtonClick());
-        this._domButtonActivate.on("click", () => this._onActivateButtonClick());
-        this._domButtonDeactivate.on("click", () => this._onDeactivateButtonClick());
+    #setupActions() {
+        this.#dom.buttonSave.on("click", () => this._onSaveButtonClick());
+        this.#dom.buttonReset.on("click", () => this._onResetButtonClick());
+        this.#dom.buttonDelete.on("click", () => this._onDeleteButtonClick());
+        this.#dom.buttonActivate.on("click", () => this._onActivateButtonClick());
+        this.#dom.buttonDeactivate.on("click", () => this._onDeactivateButtonClick());
 
-        this._domEditName.on("input", () => this._onInputChange());
-        this._domEditUrl.on("input", () => this._onInputChange());
-        this._domEditGitHubBranch.on("input", () => this._onInputChange());
+        this.#dom.editName.on("input", () => this._onInputChange());
+        this.#dom.editUrl.on("input", () => this._onInputChange());
+        this.#dom.editGitHubBranch.on("input", () => this._onInputChange());
     }
 
-    _onPanelSelected() {
-        this._setUiSelected(true);
-        this._onSelectedCallback?.(this);
+    #onPanelSelected() {
+        this.selected = true;
+        this.#callbacks.onSelected?.(this);
     }
 
     _checkIfGithub() {
-        const isGithubUrl = PresetsSourceUtil.isUrlGithubRepo(this._domEditUrl.val());
-        this._domDivGithubBranch.toggle(isGithubUrl);
+        console.log("editURL: " + this.#dom.editUrl.val());
+        const isGithubUrl = PresetsSourceGithubUtil.isUrlGithubRepo(this.#dom.editUrl.val());
+        this.#dom.divGithubBranch.toggle(isGithubUrl);
     }
 
     _onInputChange() {
         this._checkIfGithub();
-        if (PresetsSourceUtil.containsBranchName(this._domEditUrl.val())) {
-            this._domEditGitHubBranch.val(PresetsSourceUtil.getBranchName(this._domEditUrl.val()));
-            this._domEditUrl.val(this._domEditUrl.val().split("/tree/")[0]);
+        if (PresetsSourceGithubUtil.containsBranchName(this.#dom.editUrl.val())) {
+            this.#dom.editGitHubBranch.val(PresetsSourceGithubUtil.getBranchName(this.#dom.editUrl.val()));
+            this.#dom.editUrl.val(this.#dom.editUrl.val().split("/tree/")[0]);
         }
-        this._setIsSaved(false);
+        this.metadataEdited = false;
     }
 
     _onSaveButtonClick() {
-        this.#presetsSourceMetadata.name = this._domEditName.val();
-        this.#presetsSourceMetadata.url = this._domEditUrl.val();
-        this.#presetsSourceMetadata.branch = this._domEditGitHubBranch.val();
-        this._setIsSaved(true);
-        this._onSaveCallback?.(this);
+        this.#metadata.name = this.#dom.editName.val();
+        this.#metadata.url = this.#dom.editUrl.val();
+        this.#metadata.branch = this.#dom.editGitHubBranch.val();
+        this.metadataEdited = false;
+        this.#callbacks.onSave?.(this);
     }
 
+
     _onResetButtonClick() {
-        this._domEditName.val(this.#presetsSourceMetadata.name);
-        this._domEditUrl.val(this.#presetsSourceMetadata.url);
-        this._domEditGitHubBranch.val(this.#presetsSourceMetadata.branch);
+        this.#dom.editName.val(this.#metadata.name);
+        this.#dom.editUrl.val(this.#metadata.url);
+        this.#dom.editGitHubBranch.val(this.#metadata.branch);
         this._checkIfGithub();
-        this._setIsSaved(true);
+        this.metadataEdited = false;
     }
 
     _onDeleteButtonClick() {
         this.#dom.divWrapper.remove();
-        this._onDeletedCallback?.(this);
+        this.#callbacks.sourceChanged?.(this);
     }
 
     _onActivateButtonClick() {
         this._onSaveButtonClick();
-        this.setActive(true);
-        this._onActivateCallback?.(this);
+        this.active = true;
+        this.#callbacks.sourceChanged?.(this);
     }
 
     _onDeactivateButtonClick() {
         this._onSaveButtonClick();
-        this.setActive(false);
-        this._onDeactivateCallback?.(this);
+        this.active = false;
+        this.#callbacks.sourceChanged?.(this);
     }
 
-    _setIsSaved(isSaved) {
-        if (isSaved) {
-            this._domButtonSave.addClass(GUI.buttonDisabledClass);
-            this._domButtonReset.addClass(GUI.buttonDisabledClass);
-        } else {
-            this._domButtonSave.removeClass(GUI.buttonDisabledClass);
-            this._domButtonReset.removeClass(GUI.buttonDisabledClass);
-        }
-    }
+    #readDom() {
+        this.#dom.divInnerPanel = this.#dom.divWrapper.find(".presets_source_panel");
+        this.#dom.divNoEditing = this.#dom.divWrapper.find(".presets_source_panel_no_editing");
+        this.#dom.divEditing = this.#dom.divWrapper.find(".presets_source_panel_editing");
 
-    _readDom() {
-        this._domDivInnerPanel = this.#dom.divWrapper.find(".presets_source_panel");
-        this._domDivNoEditing = this.#dom.divWrapper.find(".presets_source_panel_no_editing");
-        this._domDivEditing = this.#dom.divWrapper.find(".presets_source_panel_editing");
+        this.#dom.editName = this.#dom.divWrapper.find(".presets_source_panel_editing_name_field");
+        this.#dom.editUrl = this.#dom.divWrapper.find(".presets_source_panel_editing_url_field");
+        this.#dom.editGitHubBranch = this.#dom.divWrapper.find(".presets_source_panel_editing_branch_field");
 
-        this._domEditName = this.#dom.divWrapper.find(".presets_source_panel_editing_name_field");
-        this._domEditUrl = this.#dom.divWrapper.find(".presets_source_panel_editing_url_field");
-        this._domEditGitHubBranch = this.#dom.divWrapper.find(".presets_source_panel_editing_branch_field");
+        this.#dom.buttonSave = this.#dom.divWrapper.find(".presets_source_panel_save");
+        this.#dom.buttonReset = this.#dom.divWrapper.find(".presets_source_panel_reset");
+        this.#dom.buttonActivate = this.#dom.divWrapper.find(".presets_source_panel_activate");
+        this.#dom.buttonDeactivate = this.#dom.divWrapper.find(".presets_source_panel_deactivate");
+        this.#dom.buttonDelete = this.#dom.divWrapper.find(".presets_source_panel_delete");
+        this.#dom.divGithubBranch = this.#dom.divWrapper.find(".presets_source_panel_editing_github_branch");
+        this.#dom.divNoEditingName = this.#dom.divWrapper.find(".presets_source_panel_no_editing_name");
 
-        this._domButtonSave = this.#dom.divWrapper.find(".presets_source_panel_save");
-        this._domButtonReset = this.#dom.divWrapper.find(".presets_source_panel_reset");
-        this._domButtonActivate = this.#dom.divWrapper.find(".presets_source_panel_activate");
-        this._domButtonDeactivate = this.#dom.divWrapper.find(".presets_source_panel_deactivate");
-        this._domButtonDelete = this.#dom.divWrapper.find(".presets_source_panel_delete");
-        this._domDivGithubBranch = this.#dom.divWrapper.find(".presets_source_panel_editing_github_branch");
-        this._domDivNoEditingName = this.#dom.divWrapper.find(".presets_source_panel_no_editing_name");
-
-        this._domDivSelectedIndicator = this.#dom.divWrapper.find(".presets_source_panel_no_editing_selected");
+        this.#dom.divSelectedIndicator = this.#dom.divWrapper.find(".presets_source_panel_no_editing_selected");
     }
 }
 
