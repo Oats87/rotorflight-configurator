@@ -46,16 +46,18 @@ export default class SourcePanel {
         return this.#metadata;
     }
 
-    load() {
-        return new Promise(() => {
-            console.log("loading source panel");
+    async load() {
+        console.log("loading source panel");
         SourcePanel.s_panelCounter++;
         this.#domId = `source_panel_${SourcePanel.s_panelCounter}`;
         console.log("adding for dom ID: " + this.#domId);
         this.#parentDiv.append(`<div id="${this.#domId}"></div>`);
         this.#dom.divWrapper = $(`#${this.#domId}`);
         this.#dom.divWrapper.toggle(false);
-        }).then(this.#dom.divWrapper.load("./tabs/presets/SourcesDialog/SourcePanel.html")).then(() => { this.#setupHtml(); });
+        await new Promise((resolve) => { 
+            this.#dom.divWrapper.load("./tabs/presets/SourcesDialog/SourcePanel.html", resolve);
+        });
+        this.#setupHtml();
     }
 
     #loadIndex() {

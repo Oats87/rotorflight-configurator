@@ -442,7 +442,7 @@ class PresetsTab {
 
         await this.presetsDetailedDialog.load();
         await this.presetsSourcesDialog.load();
-        console.log("loaded");
+        console.log("done with the await for some reason");
         this.tryLoadPresets();
         GUI.content_ready(callback);
     };

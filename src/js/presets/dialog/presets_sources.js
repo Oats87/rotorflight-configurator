@@ -17,15 +17,16 @@ export default class PresetsSourcesDialog {
         this.#dom.dialog = domDialog;
     }
 
-    load() {
-        return new Promise(resolve => {
-            this.#dom.dialog.load("./tabs/presets/SourcesDialog/SourcesDialog.html",
-            () => {
-                resolve();
-            });
-        }).then(() => { this.#setupDialog(); })
-        .then(() => { this.#initializeSources(); });
+    async load() {
+        console.log("loading presets_sources dialog");
+        await new Promise(resolve => {
+            this.#dom.dialog.load("./tabs/presets/SourcesDialog/SourcesDialog.html", resolve);
+        });
 
+
+        console.log("loaded presets_sources dialog");
+        this.#setupDialog();
+        await this.#initializeSources();
     }
 
     show() {
@@ -48,7 +49,8 @@ export default class PresetsSourcesDialog {
         return this.#collectSourcesMetadata().filter(source => source.active && !source.official).length > 0;
     }
 
-    #initializeSources() {
+    async #initializeSources() {
+        console.log("initializing sources");
         let sourceMetadata = [];
         ConfigStorage.get('PresetSourcesMetadata', function(result) {
             if (result.PresetSourcesMetadata) {
@@ -58,8 +60,9 @@ export default class PresetsSourcesDialog {
         sourceMetadata.unshift(this.#createOfficialSource());
         for (let i = 0; i < sourceMetadata.length; i++) {
             console.log("adding new source panel");
-            this.#addNewSourcePanel(sourceMetadata[i]);
+            await this.#addNewSourcePanel(sourceMetadata[i]);
         }
+        console.log("finished initializing sources");
     }
 
     #saveSourcesMetadataToStorage() {
