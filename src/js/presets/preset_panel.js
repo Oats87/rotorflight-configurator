@@ -4,6 +4,7 @@ import PresetInstance from "@/js/presets/source/preset_instance.js";
  * @typedef {import("@/js/presets/source/retriever.js").PresetData} PresetData
  * @typedef {import("@/js/presets/source/source.js").Source} Source
  * @typedef {import("@/js/presets/preset_dialog.js").default} PresetsDialog
+ * @typedef {import("@/js/presets/preset_tracker.js").default} PresetTracker
  */
 
 export default class PresetPanel
@@ -100,7 +101,7 @@ export default class PresetPanel
     /**
      * @type {boolean} 
      */
-    #clickable;
+    #clickable = false;
 
     /**
      * @type {boolean} 
@@ -123,26 +124,35 @@ export default class PresetPanel
     #presetSelectedForApply;
 
     /**
+     * @type {?PresetTracker}
+     */
+    #presetTracker;
+
+    #viewLink = "";
+
+    /**
      * 
-     * @param {HTMLDivElement} parentDiv 
+     * @param {HTMLDivElement} parentDiv
      * @param {PresetData} preset 
      * @param {Source} source 
      * @param {boolean} clickable 
      * @param {boolean} showSourceName 
      * @param {Function} onLoadedCallback 
-     * @param {any[]} favoritePresets 
+     * @param {?PresetTracker} presetTracker 
      */
-    constructor(parentDiv, preset, source, clickable, showSourceName, presetSelectedForApply, onLoadedCallback, favoritePresets)
+    constructor(parentDiv, preset, source, clickable, showSourceName, presetSelectedForApply, onLoadedCallback, presetTracker)
     {
-        PresetPanel.s_panelCounter ++;
         this.#dom.parentDiv = parentDiv;
         this.#callbacks.onLoaded = onLoadedCallback;
-        this.#domId = `preset_title_panel_${PresetPanel.s_panelCounter}`;
+        this.#domId = `preset_panel_${preset.hash}`;
+        if (clickable) {
+            this.#domId += "_clickable";
+        }
         this.#presetData = preset;
         this.#presetSource = source;
         this.#showSourceName = showSourceName;
         this.#clickable = clickable;
-        this._favoritePresets = favoritePresets;
+        this.#presetTracker = presetTracker;
         this.#presetSelectedForApply = presetSelectedForApply;
 
         this.#dom.parentDiv.append(`<div class="${this.#domId}"></div>`);
@@ -151,12 +161,25 @@ export default class PresetPanel
         this.#starClicked = false;
         this.#mouseOnStar = false;
         this.#mouseOnPanel = false;
-        this.#clickable = clickable;
+        this.#viewLink = this.#presetSource.metadata.viewUrl + this.#presetData.fullPath;
+    }
 
-        if (clickable) {
-            this.#dom.divWrapper.addClass("preset_title_panel_border");
-            // setting up hover effect here, because if setup in SCC it stops working after background animation like - this._domWrapperDiv.animate({ backgroundColor....
-        }
+    #readDom()
+    {
+        this.#dom.title = this.#dom.divWrapper.find('.preset_panel_title');
+        this.#dom.star = this.#dom.divWrapper.find('.preset_panel_star');
+        this.#dom.category = this.#dom.divWrapper.find('.preset_panel_category');
+        this.#dom.author = this.#dom.divWrapper.find('.preset_panel_author_text');
+        this.#dom.keywords = this.#dom.divWrapper.find('.preset_panel_keywords_text');
+        this.#dom.sourceRepository = this.#dom.divWrapper.find('.preset_panel_source_text');
+        this.#dom.sourceRepositoryRow = this.#dom.divWrapper.find('.preset_panel_source_row');
+        this.#dom.versions = this.#dom.divWrapper.find('.preset_panel_versions_text');
+        this.#dom.boards = this.#dom.divWrapper.find('preset_panel_boards_text');
+        this.#dom.boardsRow = this.#dom.divWrapper.find('.preset_panel_boards_row');
+        this.#dom.statusOfficial = this.#dom.divWrapper.find('.preset_panel_status_official');
+        this.#dom.statusCommunity = this.#dom.divWrapper.find('.preset_panel_status_community');
+        this.#dom.statusExperimental = this.#dom.divWrapper.find('.preset_panel_status_experimental');
+        this.#dom.officialSourceIcon = this.#dom.divWrapper.find('.preset_panel_rotorflight_official');
     }
 
     #updateHoverEffects() {
@@ -176,7 +199,7 @@ export default class PresetPanel
             this.#dom.star.css({"background-color": "var(--backgroundColor)"});
         }
 
-        if (this.#presetData.lastPickDate) {
+        if (this.#presetTracker.find(this.#viewLink)) {
             this.#dom.star.css("background-image", "url('../../../images/icons/star_orange.svg')");
         } else if (starMouseHover) {
             this.#dom.star.css("background-image", "url('../../../images/icons/star_orange_stroke.svg')");
@@ -186,7 +209,9 @@ export default class PresetPanel
     }
 
     load() {
-        this.#dom.divWrapper.load("./tabs/presets/preset_panel.html", () => this.#setupHtml());
+        return new Promise(resolve => {
+            this.#dom.divWrapper.load("./tabs/presets/preset_panel.html", () => {this.#setupHtml(); resolve();});
+        });
     }
 
     /**
@@ -196,7 +221,7 @@ export default class PresetPanel
     subscribeClick(presetDialog, presetInstances) {
         this.#dom.divWrapper.on("click", () => {
             if (!this.#starClicked) {
-                this.#showPresetDetails(presetDialog, presetInstances);
+                this.showPresetDetails(presetDialog, presetInstances);
             }
 
             this.#starClicked = false;
@@ -208,27 +233,22 @@ export default class PresetPanel
      * @param {PresetsDialog} presetDialog 
      * @param {PresetInstance[]} presetInstances
      */
-    #showPresetDetails(presetDialog, presetInstances) {
-        let presetInstance = null;
-        let presetInstanceExists = false;
-        presetInstances.forEach(pi => {
-            if (pi.presetData.hash === this.#presetData.hash) {
-                presetInstance = pi;
-                presetInstanceExists = true;
-            }
-        });
+    showPresetDetails(presetDialog, presetInstances, presetInstance = null, onCloseCallback = null) {
+        let editingPresetInstance = true;
         if (presetInstance === null) {
             presetInstance = new PresetInstance(this.#presetSource.metadata, this.#presetData);
+            editingPresetInstance = false;
         }
 
         presetDialog.showPreset(this.#presetSource, presetInstance, this.#showSourceName).then(isPresetPicked => {
             if (isPresetPicked) {
                 this.setPicked(true);
-                if (!presetInstanceExists) {
+                if (!editingPresetInstance) {
                     presetInstances.push(presetInstance);
                 }
             }
             this.#updateHoverEffects();
+            onCloseCallback?.();
         });
     }
 
@@ -252,7 +272,15 @@ export default class PresetPanel
         this.#dom.title.text(this.#presetData.title);
         this.#dom.title.prop("title", this.#presetData.title);
         this.#dom.author.text(this.#presetData.author);
-        this.#dom.versions.text(this.#presetData.firmware_version?.join("; "));
+        this.#dom.versions.text(this.#presetData.firmware_version?.join(", "));
+
+        if (this.#presetData.board_name?.length > 0) {
+            this.#dom.boards.text(this.#presetData.board_name.join(", "));
+            this.#dom.boardsRow.toggle(true);
+        } else {
+            this.#dom.boardsRow.toggle(false);
+        }
+
         this.#dom.sourceRepository.text(this.#presetSource.metadata.name);
         this.#dom.sourceRepositoryRow.toggle(this.#showSourceName);
 
@@ -280,22 +308,6 @@ export default class PresetPanel
         }
     }
 
-    #readDom()
-    {
-        this.#dom.title = this.#dom.divWrapper.find('.preset_title_panel_title');
-        this.#dom.star = this.#dom.divWrapper.find('.preset_title_panel_star');
-        this.#dom.category = this.#dom.divWrapper.find('.preset_title_panel_category');
-        this.#dom.author = this.#dom.divWrapper.find('.preset_title_panel_author_text');
-        this.#dom.keywords = this.#dom.divWrapper.find('.preset_title_panel_keywords_text');
-        this.#dom.sourceRepository = this.#dom.divWrapper.find('.preset_title_panel_repository_text');
-        this.#dom.sourceRepositoryRow = this.#dom.divWrapper.find('.preset_title_panel_repository_row');
-        this.#dom.versions = this.#dom.divWrapper.find('.preset_title_panel_versions_text');
-        this.#dom.statusOfficial = this.#dom.divWrapper.find('.preset_title_panel_status_official');
-        this.#dom.statusCommunity = this.#dom.divWrapper.find('.preset_title_panel_status_community');
-        this.#dom.statusExperimental = this.#dom.divWrapper.find('.preset_title_panel_status_experimental');
-        this.#dom.officialSourceIcon = this.#dom.divWrapper.find('.preset_title_panel_betaflight_official');
-    }
-
     #setupStar() {
         this.#updateHoverEffects();
 
@@ -306,13 +318,12 @@ export default class PresetPanel
     }
 
     #processStarClick() {
-        if (this.#presetData.lastPickDate) {
-            this._favoritePresets.delete(this.#presetData, this.#presetSource);
+        const trackedPreset = this.#presetTracker.find(this.#viewLink);
+        if (trackedPreset) {
+            this.#presetTracker.remove(this.#viewLink);
         } else {
-            this._favoritePresets.add(this.#presetData, this.#presetSource);
+            this.#presetTracker.add(this.#viewLink);
         }
-
-        this._favoritePresets.saveToStorage();
         this.#updateHoverEffects();
     }
 
@@ -321,5 +332,3 @@ export default class PresetPanel
         this.#dom.divWrapper.remove();
     }
 }
-
-PresetPanel.s_panelCounter = 0;

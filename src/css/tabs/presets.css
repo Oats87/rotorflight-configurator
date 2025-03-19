@@ -27,7 +27,7 @@
 .tab-presets .top_panel_spacer {
   width: 0px;
   display: inline;
-  border: 1px hsl(0, 0%, 24%);
+  border: 1px #f1f1f1;
   border-style: none none none solid;
   height: 60%;
   margin-right: 10px;
@@ -423,7 +423,7 @@
 
 /* Start detailed dialog panel */
 
-.preset_detailed_dialog_title_panel {
+.preset_dialog_title_panel {
   padding-bottom: .5ex;
   margin-bottom: 2ex;
 }
@@ -432,11 +432,11 @@
   padding: 0px; /* main.css defines a padding of 1em but we want to turn this off so the title/footer bar looks nice */
 } 
 
-#presets_detailed_dialog_properties {
+#preset_dialog_properties {
   padding: 0px 0px 0px 20px;
 }
 
-.presets_detailed_dialog_scrollable {
+.preset_dialog_scrollable {
   bottom: 51px;
   width: 100%;
   position: absolute;
@@ -449,17 +449,17 @@
   bottom: 0; /* lock footer to the bottom of the dialog */
 }
 
-#presets_detailed_dialog_content_wrapper .preset_title_panel_title {
+#preset_dialog_content_wrapper .preset_panel_title {
   padding-bottom: 0.5ex;
   border-bottom: 1px solid #FFBB00;
   margin-bottom: 2ex;
 }
 
-#presets_detailed_dialog_content_wrapper .ms-choice > span.placeholder {
+#preset_dialog_content_wrapper .ms-choice > span.placeholder {
   color: var(--defaultText);
 }
 
-#presets_detailed_dialog_content_wrapper .left-panel {
+#preset_dialog_content_wrapper .left-panel {
   position: absolute;
   left: 0px;
   padding-left: 20px;
@@ -481,7 +481,7 @@
   width: 150px;
 }
 
-.presets_detailed_dialog_text {
+.preset_dialog_text {
   padding-top: 6px;
   padding-bottom: 6px;
   margin-top: 12px;
@@ -492,11 +492,23 @@
   user-select: text;
 }
 
-#presets_detailed_dialog_html_description {
+#preset_dialog_text_cli {
+  -webkit-box-sizing: border-box;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  border: 1px solid var(--subtleAccent);
+  border-radius: 5px;
+  margin-right: 16px;
+  margin-bottom: 5px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#preset_dialog_html_description {
   white-space: normal;
 }
 
-#presets_detailed_dialog_html_description h1 {
+#preset_dialog_html_description h1 {
   font-weight: 300;
   font-size: 20px;
   line-height: 24px;
@@ -504,54 +516,54 @@
   padding-bottom: 3px;
 }
 
-#presets_detailed_dialog_html_description h2 {
+#preset_dialog_html_description h2 {
   font-weight: 300;
   font-size: 16px;
 }
 
-#presets_detailed_dialog_html_description h3 {
+#preset_dialog_html_description h3 {
   padding-top: 5px;
   padding-bottom: 0px;
   font-weight: 200;
   font-size: 12px;
 }
 
-#presets_detailed_dialog_html_description h4 {
+#preset_dialog_html_description h4 {
   padding-top: 0px;
   padding-bottom: 0px;
   font-weight: 200;
   font-size: 10px;
 }
 
-#presets_detailed_dialog_html_description ul {
+#preset_dialog_html_description ul {
   padding-left: 25px;
 }
 
-#presets_detailed_dialog_html_description ul li {
+#preset_dialog_html_description ul li {
   padding-left: 12px;
   list-style-type: disclosure-closed;
 }
 
-#presets_detailed_dialog_html_description ol li {
+#preset_dialog_html_description ol li {
   padding-left: 12px;
   list-style-type: decimal;
 }
 
-#presets_options_panel {
+#preset_options_panel {
   height: 20px;
 }
 
-#presets_options_panel .ms-choice {
+#preset_options_panel .ms-choice {
   border-color: #FFBB00;
   border-width: 2px;
 }
-#presets_options_panel > span {
+#preset_options_panel > span {
   line-height: 20px;
 }
-#presets_detailed_dialog_loading {
+#preset_dialog_loading {
   height: 600px;
 }
-#presets_options_select {
+#preset_options_select {
   width: 80%;
 }
 #preset_options_label {
@@ -573,12 +585,12 @@
 }
 
 @media all and (max-width: 575px) {
-  .presets_detailed_dialog_text {
+  .preset_dialog_text {
     height: unset;
     padding-bottom: 100px;
   }
 
-  #presets_detailed_dialog_content_wrapper .content_toolbar {
+  #preset_dialog_content_wrapper .content_toolbar {
     position: fixed;
   }
 
@@ -602,17 +614,17 @@
   #presets_detailed_dialog .mainButton {
     margin-top: 40px;
   }
-  #presets_options_panel {
+  #preset_options_panel {
     height: 26px;
     margin-top: 6px;
     grid-template-columns: 100px 1fr;
     display: grid;
   }
-  #presets_options_select {
+  #preset_options_select {
     width: 100%;
   }
 
-  .presets_detailed_dialog_scrollable {
+  .preset_dialog_scrollable {
     overflow-y: auto;
     overflow-x: hidden;
     padding-bottom: 51px;
@@ -624,19 +636,19 @@
 
 /* Preset Title Panel Start */
 
-.preset_title_panel {
+.preset_panel {
   padding: 0px; /* main.css defines a padding of 1em but we want to turn this off so the title/footer bar looks nice */
   color: var(--defaultText);
   position: relative;
 }
 
-.preset_title_panel_wrapper {
+.preset_panel_wrapper {
   padding: 0px 20px 20px 20px; /* turn the padding back on */
   overflow-y: auto;
   overflow-x: hidden;
 }
 
-.preset_title_panel_title {
+.preset_panel_title {
   display: inline-block;
   margin-bottom: 1ex;
   overflow: hidden;
@@ -645,7 +657,7 @@
   width: calc(100% - 60px);
 }
 
-.preset_title_panel_star {
+.preset_panel_star {
   background-image: url(../../../images/icons/star_orange.svg);
   width: 25px;
   height: 25px;
@@ -659,7 +671,7 @@
   top: 0px;
 }
 
-.preset_title_panel_betaflight_official {
+.preset_panel_rotorflight_official {
   background-image: url(../../../images/icons/cf_icon_welcome_orange.svg);
   width: 25px;
   height: 25px;
@@ -673,11 +685,11 @@
   top: 0px;
 }
 
-.preset_title_panel_category {
+.preset_panel_category {
   font-weight: bold;
 }
 
-.preset_title_panel_official {
+.preset_panel_official {
   padding-left: 3px;
   padding-right: 3px;
   padding-top: 3px;
@@ -687,41 +699,41 @@
   border-radius: 4px;
 }
 
-.preset_title_panel_status_official {
+.preset_panel_status_official {
   background-color: green;
 }
 
-.preset_title_panel_status_community {
+.preset_panel_status_community {
   background-color: yellow;
 }
 
-.preset_title_panel_status_experimental {
+.preset_panel_status_experimental {
   background-color: red;
 }
 
-.preset_title_panel_versions_text {
+.preset_panel_versions_text {
   font-weight: bold;
 }
 
-.preset_title_panel_keywords_text {
+.preset_panel_keywords_text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.preset_title_panel_repository_text {
+.preset_panel_source_text {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.presets_title_panel_table {
+.preset_panel_table {
   table-layout: fixed;
   width: 100%;
   border-collapse: collapse;
 }
 
-.presets_title_panel_table td{
+.preset_panel_table td{
   overflow: hidden;
   height: 24px;
   width: auto;
@@ -729,7 +741,7 @@
   white-space: nowrap;
 }
 
-.presets_title_panel_table td:nth-child(1){
+.preset_panel_table td:nth-child(1){
   width: 100px;
 }
 

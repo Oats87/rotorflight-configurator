@@ -6,10 +6,9 @@ const optionGroupVsNameDelimiter = ":";
 
 /**
  * @typedef {import("@/js/presets/source/preset_instance.js").PresetInstance} PresetInstance
- * @typedef {import("@/js/presets/favorites.js").FavoritePreset} FavoritePreset
  * @typedef {import('./source/source.js').Source} Source
  * @typedef {import("@/js/presets/source/retriever.js").PresetData} PresetData
- * @typedef {import("@/js/presets/favorites.js").FavoritePreset} FavoritePreset
+ * @typedef {import("@/js/presets/preset_tracker.js").default} PresetTracker
  */
 
 /**
@@ -102,18 +101,6 @@ export default class PresetDialog {
     #onPresetPickedCallback;
 
     /**
-     * @type {FavoritePreset[]} List of favorite presets.
-     * @private
-     */
-    #favoritePresets;
-
-    /**
-     * @type {Object} Settings for the final dialog.
-     * @private
-     */
-    #finalDialogYesNoSettings = {};
-
-    /**
      * @type {Function} Promise resolve function for the open dialog.
      * @private
      */
@@ -154,15 +141,21 @@ export default class PresetDialog {
     #isPresetPickedOnClose;
 
     /**
+     * @type {PresetTracker} Preset tracker.
+     * @private
+     */
+    #presetTracker;
+
+    /**
      * Creates an instance of PresetDetails.
      * @param {HTMLElement} domDialog - The dialog element.
      * @param {Function} onPresetPickedCallback - Callback when a preset is picked.
-     * @param {FavoritePreset[]} favoritePresets - List of favorite presets.
+     * @param {PresetTracker} presetTracker - Preset tracker.
      */
-    constructor(domDialog, onPresetPickedCallback, favoritePresets) {
+    constructor(domDialog, onPresetPickedCallback, presetTracker) {
         this.#dom.dialog = domDialog;
         this.#onPresetPickedCallback = onPresetPickedCallback;
-        this.#favoritePresets = favoritePresets;
+        this.#presetTracker = presetTracker;
     }
 
     /**
@@ -198,14 +191,6 @@ export default class PresetDialog {
             .then(() => {
                 this.#loadPresetUi();
                 this.#setLoadingState(false);
-                this.#finalDialogYesNoSettings = {
-                    title: i18n.getMessage("presetsWarningDialogTitle"),
-                    text: GUI.escapeHtml(this.#presetInstance.completeWarning),
-                    buttonYesText: i18n.getMessage("presetsWarningDialogYesButton"),
-                    buttonNoText: i18n.getMessage("presetsWarningDialogNoButton"),
-                    buttonYesCallback: () => this.#pickPresetFwVersionCheck(),
-                    buttonNoCallback: null,
-                };
             })
             .catch(err => {
                 console.error(err);
@@ -219,19 +204,19 @@ export default class PresetDialog {
     #readDom() {
         i18n.localizePage();
 
-        this.#dom.buttonApply = $('#presets_detailed_dialog_applybtn');
-        this.#dom.buttonCancel = $('#presets_detailed_dialog_closebtn');
-        this.#dom.loading = $('#presets_detailed_dialog_loading');
-        this.#dom.error = $('#presets_detailed_dialog_error');
-        this.#dom.properties = $('#presets_detailed_dialog_properties');
-        this.#dom.titlePanel = $('.preset_detailed_dialog_title_panel');
-        this.#dom.descriptionText = $('#presets_detailed_dialog_text_description');
-        this.#dom.descriptionHtml = $('#presets_detailed_dialog_html_description');
-        this.#dom.cliText = $('#presets_detailed_dialog_text_cli');
+        this.#dom.buttonApply = $('#preset_dialog_applybtn');
+        this.#dom.buttonCancel = $('#preset_dialog_closebtn');
+        this.#dom.loading = $('#preset_dialog_loading');
+        this.#dom.error = $('#preset_dialog_error');
+        this.#dom.properties = $('#preset_dialog_properties');
+        this.#dom.titlePanel = $('.preset_dialog_title_panel');
+        this.#dom.descriptionText = $('#preset_dialog_text_description');
+        this.#dom.descriptionHtml = $('#preset_dialog_html_description');
+        this.#dom.cliText = $('#preset_dialog_text_cli');
         this.#dom.githubLink = this.#dom.dialog.find('#presets_open_online');
         this.#dom.discussionLink = this.#dom.dialog.find('#presets_open_discussion');
-        this.#dom.optionsSelect = $('#presets_options_select');
-        this.#dom.optionsSelectPanel = $('#presets_options_panel');
+        this.#dom.optionsSelect = $('#preset_options_select');
+        this.#dom.optionsSelectPanel = $('#preset_options_panel');
         this.#dom.buttonShowCLI = $('#presets_cli_show');
         this.#dom.buttonHideCLI = $('#presets_cli_hide');
 
@@ -252,15 +237,15 @@ export default class PresetDialog {
         this.#dom.githubLink.attr("href", this.#presetInstance.viewLink);
 
         if (this.#presetInstance.presetData.discussion) {
-            this.#dom.discussionLink.removeClass(GUI.buttonDisabledClass);
+            this.#dom.discussionLink.toggle(true);
             this.#dom.discussionLink.attr("href", this.#presetInstance.presetData.discussion);
         } else {
-            this.#dom.discussionLink.addClass(GUI.buttonDisabledClass);
+            this.#dom.discussionLink.toggle(false);
         }
 
         this.#dom.titlePanel.empty();
         const titlePanel = new PresetPanel(this.#dom.titlePanel, this.#presetInstance.presetData, this.#presetSource, false,
-            this.#showPresetRepoName, false, () => this.#setLoadingState(false), this.#favoritePresets);
+            this.#showPresetRepoName, false, () => this.#setLoadingState(false), this.#presetTracker);
         titlePanel.load();
         this.#loadOptionsSelect();
         this.#updateFinalCliText();
@@ -297,9 +282,9 @@ export default class PresetDialog {
         this.#dom.error.toggle(false);
 
         if (isLoading) {
-            this.#dom.buttonApply.addClass(GUI.buttonDisabledClass);
+            this.#dom.buttonApply.toggleClass("disabled", true);
         } else {
-            this.#dom.buttonApply.removeClass(GUI.buttonDisabledClass);
+            this.#dom.buttonApply.toggleClass("disabled", false);
         }
     }
 
@@ -308,7 +293,7 @@ export default class PresetDialog {
         this.#dom.error.text(msg);
         this.#dom.properties.toggle(false);
         this.#dom.loading.toggle(false);
-        this.#dom.buttonApply.addClass(GUI.buttonDisabledClass);
+        this.#dom.buttonApply.toggleClass("disabled", true);
     }
 
     #showCliText(value) {
@@ -330,7 +315,7 @@ export default class PresetDialog {
             }
         });
         this.#dom.optionsSelect.multipleSelect({
-            placeholder: i18n.getMessage("presetsOptionsPlaceholder"),
+            placeholder: i18n.getMessage("presetOptionsPlaceholder"),
             formatSelectAll() { return i18n.getMessage("dropDownSelectAll"); },
             formatAllSelected() { return i18n.getMessage("dropDownAll"); },
             onClick: () => this.#optionsSelectionChanged(),
@@ -346,9 +331,7 @@ export default class PresetDialog {
             minimumCountSelected: 128,
         });
 
-        console.log("creating options select");
         if (this.#presetInstance.optionsValues !== null) {
-            console.log("setting options values");
             this.#dom.optionsSelect.multipleSelect('setSelects', this.#presetInstance.optionsValues);
         }
     }
@@ -424,7 +407,6 @@ export default class PresetDialog {
         this.#dom.optionsSelectPanel.toggle(optionsVisible);
 
         if (optionsVisible) {
-            console.log("Creating options select");
             this.#createOptionsSelect();
         }
 
@@ -433,16 +415,13 @@ export default class PresetDialog {
 
     #onApplyButtonClicked() {
         if (this.#presetInstance.presetData.force_options_review && !this.#optionsShownAtLeastOnce) {
-            const dialogOptions = {
-                title: i18n.getMessage("warningTitle"),
-                text: i18n.getMessage("presetsReviewOptionsWarning"),
-                buttonConfirmText: i18n.getMessage("close"),
-            };
-            GUI.showInformationDialog(dialogOptions);
+            alert(i18n.getMessage("presetsReviewOptionsWarning"));
         } else if (!this.#presetInstance.completeWarning) {
             this.#pickPresetFwVersionCheck();
         } else {
-            GUI.showYesNoDialog(this.#finalDialogYesNoSettings);
+            if(confirm(GUI.escapeHtml(this.#presetInstance.completeWarning))) {
+                this.#pickPresetFwVersionCheck();
+            }
         }
     }
 
@@ -461,19 +440,12 @@ export default class PresetDialog {
                 break;
             }
         }
-
         if (compatible) {
             this.#pickPreset();
         } else {
-            const dialogSettings = {
-                title: i18n.getMessage("presetsWarningDialogTitle"),
-                text: i18n.getMessage("presetsWarningWrongVersionConfirmation", [this.#presetInstance.presetData.firmware_version, FC.CONFIG.flightControllerVersion]),
-                buttonYesText: i18n.getMessage("presetsWarningDialogYesButton"),
-                buttonNoText: i18n.getMessage("presetsWarningDialogNoButton"),
-                buttonYesCallback: () => this.#pickPreset(),
-                buttonNoCallback: null,
-            };
-            GUI.showYesNoDialog(dialogSettings);
+            if(confirm(i18n.getMessage("presetsWarningWrongVersionConfirmation", [this.#presetInstance.presetData.firmware_version, FC.CONFIG.flightControllerVersion]))) {
+                this.#pickPreset();
+            }
         }
     }
 

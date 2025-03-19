@@ -7272,44 +7272,54 @@
         "message": "Reload",
         "description": "Text on the reload button that appears when there in an error loading presets index"
     },
-    "presetsAuthor": {
+    "presetCategory": {
+        "message": "Category:"
+    },
+    "presetAuthor": {
         "message": "Author:",
-        "description": "Hint text in the presets detailed dialog"
+        "description": "Hint text in the preset dialog"
     },
-    "presetsKeywords": {
+    "presetSelectedOptions": {
+        "message": "Selected Options:"
+    },
+    "presetKeywords": {
         "message": "Keywords:",
-        "description": "Hint text in the presets detailed dialog"
+        "description": "Hint text in the preset dialog"
     },
-    "presetsSourceRepository": {
+    "presetSource": {
         "message": "Source:",
         "description": "Text prefixing user defined name of the preset repository containing a preset"
     },
-    "presetsVersions": {
+    "presetVersions": {
         "message": "Firmware:",
-        "description": "Hint text in the presets detailed dialog"
+        "description": "Hint text in the preset dialog"
+    },
+    "presetBoards": {
+        "message": "Boards:",
+        "description": "Hint text in the preset dialog"
     },
     "presetsOfficial": {
         "message": "Official",
-        "description": "Hint text in the presets detailed dialog indication preset is official"
+        "description": "Hint text in the preset dialog indication preset is official"
     },
     "presetsCommunity": {
         "message": "Community",
-        "description": "Hint text in the presets detailed dialog indication preset is not official but community"
+        "description": "Hint text in the preset dialog indication preset is from the community"
     },
     "presetsExperimental": {
         "message": "Experimental",
-        "description": "Hint text in the presets detailed dialog indication preset is not official but experimental"
+        "description": "Hint text in the preset dialog indication preset is experimental"
     },
     "presetsApply": {
-        "message": "Pick",
+        "message": "Select",
         "description": "Button to pick a preset"
     },
     "presetsViewOnline": {
-        "message": "View online&hellip;",
+        "message": "View Source",
         "description": "Link text for opening preset file online"
     },
     "presetsOpenDiscussion": {
-        "message": "Discussion&hellip;",
+        "message": "Discussion",
         "description": "Link text for opening preset discussion"
     },
     "presetsShowCli": {
@@ -7320,7 +7330,7 @@
         "message": "Hide CLI",
         "description": "Button to hide CLI code of a preset"
     },
-    "presetsOptions": {
+    "presetOptions": {
         "message": "Options",
         "description": "Text label for Options drop down select"
     },
@@ -7348,13 +7358,17 @@
         "message": "Error loading presets from the internet",
         "description": "Error report when failed to load presets index or a specific preset"
     },
-    "presetsButtonSave": {
-        "message": "Save and Reboot",
-        "description": "A button that saves all applied presets - analog to 'save' command in CLI"
+    "presetsButtonReview": {
+        "message": "Review Selected Presets"
     },
-    "presetsButtonCancel": {
-        "message": "Cancel",
-        "description": "A button that cancels applying the presets."
+    "presetsButtonReviewCLI":{
+        "message": "Review CLI"
+    },
+    "presetsButtonApply": {
+        "message": "Execute Presets"
+    },
+    "presetsButtonReset": {
+        "message": "Reset"
     },
     "presetsApplyingPresets": {
         "message": "Applying configuration...",
@@ -7381,7 +7395,7 @@
         "description": "Warning title in the warning dialog in the presets"
     },
     "presetsWarningDialogYesButton": {
-        "message": "Agree",
+        "message": "Acknowledge",
         "description": "Agree button in the presets warning dialog"
     },
     "presetsWarningDialogNoButton": {
@@ -7393,11 +7407,11 @@
         "description": "Button to open Presets Wiki link"
     },
     "backupDiffAll": {
-        "message": "Save Backup (Differential)",
+        "message": "Save Differential Backup (diff all)",
         "description": "Button to backup differential configuration to a file"
     },
     "backupDumpAll": {
-        "message": "Save Backup (Full)",
+        "message": "Save Full Backup (dump all)",
         "description": "Button to backup a dump all of the configuration to a file"
     },
     "backupLoad": {
@@ -7405,19 +7419,19 @@
         "description": "Button to load backup from a file"
     },
     "backupWaitDialogTitleSavingDiffAll": {
-        "message": "Saving differential configuration from the flight controller",
+        "message": "Saving diff all from the flight controller",
         "description": "Title for the waiting dialog when saving diff all into a file"
     },
     "backupWaitDialogTitleSavingDumpAll": {
-        "message": "Saving full configuration from the flight controller",
+        "message": "Saving dump all from the flight controller",
         "description": "Title for the waiting dialog when saving dump all into a file"
     },
     "backupWaitDialogTitleLoadBackup": {
-        "message": "Loading current configuration onto the flight controller",
+        "message": "Loading backup onto the flight controller",
         "description": "Title for the waiting dialog when loading dump all into a file"
     },
     "backupWaitDialogMessageErrorSavingBackup": {
-        "message": "Error occured while saving current configuration",
+        "message": "Error occurred while saving current configuration",
         "description": "Message appears on presets tab when saving current diff all into a file has failed"
     },
     "presetSources": {
@@ -7456,6 +7470,9 @@
         "message": "Delete",
         "description": "Presets tab, sources dialog, button to delete selected source"
     },
+    "reviewPresetsDialogTitle": {
+        "message": "Review Selected Presets"
+    },
     "presetsWarningNotOfficialSource": {
         "message": "<span class=\"message-negative\">WARNING!</span> A third party preset source is selected.",
         "description": "Warning message that shows up when a third party preset source is selected"
@@ -7465,7 +7482,7 @@
         "description": "Warning message that shows up when we fail to load some repositories"
     },
     "presetsWarningBackup": {
-        "message": "Please make sure you backup your current configuration ('$t(presetsBackupSave.message)' button or via CLI if the button is disabled) <strong>before</strong> picking and applying presets. Otherwise there is no way to return to previous configuration after applying presets.",
+        "message": "Please make sure you backup your current configuration ('$t(backupDiffAll.message)' button or via CLI if the button is disabled) <strong>before</strong> picking and applying presets. Otherwise there is no way to return to previous configuration after applying presets.",
         "description": "Warning message that shows up at the top of the presets tab"
     },
     "presets_sources_dialog_warning": {
@@ -7473,8 +7490,11 @@
         "description": "Warning message that shows up at the top of the preset sources dialog"
     },
     "presetsWarningWrongVersionConfirmation": {
-        "message": "Picked preset requires firmware version $1<br/> Current firmware version is $2",
+        "message": "Picked preset requires firmware version $1. Current firmware version is $2",
         "description": "Warning message that shows up at the top of the preset sources dialog"
+    },
+    "presetsSearchPlaceholder": {
+        "message": "Example: \"OMPHOBBY M5\", or \"OMPHOBBY M7\""
     },
     "presetsNoPresetsFound": {
         "message": "No presets found for the given search parameters",
@@ -7484,7 +7504,7 @@
         "message": "Reached the maximum limit of the shown presets number",
         "description": "Message that apprears on presets tab if too many presets found"
     },
-    "presetsOptionsPlaceholder": {
+    "presetOptionsPlaceholder": {
         "message": "ATTENTION! Review the list of options",
         "description": "Placeholder for the options list dropdown"
     },
@@ -7495,5 +7515,17 @@
     "presetsReviewOptionsWarning": {
         "message": "Please review the list of options before picking this preset.",
         "description": "Dialog text to prompt user to review options for the preset"
+    },
+    "presetsReviewBeforeApply": {
+        "message": "Please review all of the selected presets in the list below. The presets CLI will be applied in the order they are listed. Ensure you have taken a backup of your current configuration before applying the presets."
+    },
+    "backupFailedToSave": {
+        "message": "Something went wrong when trying to save the backup file."
+    },
+    "presetsCliConfirmationDialogTitle": {
+        "message": "Review The Rendered Presets CLI Commands"
+    },
+    "presetEdit": {
+        "message": "Edit"
     }
 }

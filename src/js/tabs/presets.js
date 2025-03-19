@@ -9,8 +9,10 @@ import PresetInstance from '@/js/presets/source/preset_instance.js';
 import PresetDialog from '@/js/presets/preset_dialog.js';
 import PresetPanel from '@/js/presets/preset_panel.js';
 import Sources from '@/js/presets/sources.js';
-import FavoritePresetsClass from '@/js/presets/favorites.js';
+import PresetTracker from '@/js/presets/preset_tracker.js';
 import { FC } from "@/js/fc.svelte.js";
+import { mount, unmount } from "svelte";
+import SelectedPresetReviewDialog from "@/tabs/presets/selected_preset_review_dialog.svelte";
 
 const COMMAND_DIFF_ALL = "diff all";
 const COMMAND_DUMP_ALL = "dump all";
@@ -33,24 +35,26 @@ class PresetsTab {
     majorVersion = 1;
 
     /**
-     * @type {import("@/js/presets/favorites.js").default}
+     * @type {import("@/js/presets/preset_tracker.js").default}
      */
-    #favoritePresets = null;
+    #presetTracker = null;
 
     /**
      * @type {PresetDialog}
      */
-    presetsDetailedDialog = null;
+    #presetDialog = null;
 
     /**
      * @type {Sources}
      */
-    presetsSourcesDialog = null;
+    #sourcesDialog = null;
 
     /**
      * @type {PresetInstance[]}
      */
     #presetInstances = [];
+
+    #presetsReviewDialog;
 
     /**
      * @typedef {Object} DOMElements
@@ -65,8 +69,8 @@ class PresetsTab {
      * @property {?HTMLSelectElement} selectStatus - The dropdown for selecting a status.
      * @property {?HTMLInputElement} inputTextFilter - The input field for text filtering.
      * @property {?HTMLElement} divPresetList - The container for the preset list.
-     * @property {?HTMLButtonElement} buttonSave - The save button element.
-     * @property {?HTMLButtonElement} buttonCancel - The cancel button element.
+     * @property {?HTMLButtonElement} buttonReview - The save button element.
+     * @property {?HTMLButtonElement} buttonReset - The cancel button element.
      * @property {?HTMLButtonElement} reloadButton - The reload button element.
      * @property {?HTMLElement} contentWrapper - The wrapper element for the main content.
      * @property {?HTMLElement} dialogCli - The CLI dialog element.
@@ -104,8 +108,8 @@ class PresetsTab {
         inputTextFilter: null,
         divPresetList: null,
 
-        buttonSave: null,
-        buttonCancel: null,
+        buttonReview: null,
+        buttonReset: null,
 
         reloadButton: null,
         contentWrapper: null,
@@ -138,8 +142,7 @@ class PresetsTab {
         this.#cliEngine = new CliEngine(this);
         this.#cliEngine.setProgressCallback(value => this.onApplyProgressChange(value));
 
-        this.#favoritePresets = new FavoritePresetsClass();
-        this.#favoritePresets.loadFromStorage();
+        this.#presetTracker = new PresetTracker();
 
         const self = this;
         $('#content').load("/src/tabs/presets/presets.html", () => self.onHtmlLoad(callback));
@@ -165,8 +168,8 @@ class PresetsTab {
         this.#dom.inputTextFilter = $('#presets_filter_text');
         this.#dom.divPresetList = $('#presets_list');
 
-        this.#dom.buttonSave = $("#presets_save_button");
-        this.#dom.buttonCancel = $("#presets_cancel_button");
+        this.#dom.buttonReview = $("#presets_review_button");
+        this.#dom.buttonReset = $("#presets_reset_button");
 
         this.#dom.reloadButton = $("#presets_reload");
         this.#dom.contentWrapper = $("#presets_content_wrapper");
@@ -214,88 +217,39 @@ class PresetsTab {
         });
     };
 
-    async previewCommands() {
-        const previewArea = $("#snippetpreviewcontent textarea#preview");
+    async onReviewClick(skipReview = false) {
         const self = this;
-        function executeSnippet() {
-            const commands = previewArea.val();
-            self.#cliEngine.executeCommands(commands);
-            GUI.snippetPreviewWindow.close();
-        }
-        function previewCommands(result, fileName) {
-            if (!GUI.snippetPreviewWindow) {
-                GUI.snippetPreviewWindow = new jBox("Modal", {
-                    id: "snippetPreviewWindow",
-                    width: 'auto',
-                    height: 'auto',
-                    closeButton: 'title',
-                    animation: false,
-                    isolateScroll: false,
-                    title: i18n.getMessage("cliConfirmSnippetDialogTitle", { fileName: fileName }),
-                    content: $('#snippetpreviewcontent'),
-                    onCreated: () =>
-                        $("#snippetpreviewcontent a.confirm").on('click', () => executeSnippet(fileName))
-                    ,
-                });
-            }
-            previewArea.val(result);
-            GUI.snippetPreviewWindow.open();
-        }
-
-        try {
-            const file = await window.filesystem.readTextFile({
-                description: "Config files",
-                extensions: [".txt", ".config"],
-            });
-            if (!file) return;
-            previewCommands(file.content, file.name);
-        } catch (err) {
-            console.log("Failed to load config", err);
-        }
-    };
-
-    async onSaveClick() {
-        const self = this;
-        const cliCommandsArray = this.getPickedPresetsCli();
 
         const previewArea = $("#snippetpreviewcontent textarea#preview");
 
         async function executeSnippet() {
             try {
-                const { commands, initialCliErrorCount } = await self.activateCli().then(() => {
-                    return new Promise((resolve) => {
-                        const initialCliErrorCount = self.#cliEngine.errorsCount;
-                        self.setupCliDialogAndShow({
-                            title: i18n.getMessage("presetsApplyingPresets"),
-                            buttonCancelCallback: null,
-                        });
-                        self.#dom.progressDialogProgressBar.show();
-                        self.#dom.progressDialogProgressBar.val(0);
-                        const commands = previewArea.val();
-                        self.snippetPreviewWindow.close();
-                        resolve({ commands, initialCliErrorCount });
-                    });
+                
+                await self.activateCli();
+                self.#dom.progressDialogProgressBar.show();
+                self.#dom.progressDialogProgressBar.val(0);
+                self.setupCliDialogAndShow({
+                    title: i18n.getMessage("presetsApplyingPresets"),
+                    buttonCancelCallback: null,
                 });
+                const commands = previewArea.val();
+                self.snippetPreviewWindow.close();
 
-                console.log("new promise with commands: " + commands);
+                const initialCliErrorCount = self.#cliEngine.errorsCount;
+                await self.#cliEngine.executeCommands(commands);
 
-                await self.#cliEngine.executeCommands(commands).then(() => {
-                    return { initialCliErrorCount }; // Pass values forward
-                }).then(({ initialCliErrorCount }) => {
-                    console.log("finished running commands, new error count " + self.#cliEngine.errorsCount + " and old: " + initialCliErrorCount);
-                    self.#dom.progressDialogProgressBar.hide();
-                    if (self.#cliEngine.errorsCount !== initialCliErrorCount) {
-                        showFinalCliOptions(true);
-                    } else {
-                        showFinalCliOptions(false);
-                    }
-                });
+                self.#dom.progressDialogProgressBar.hide();
+                if (self.#cliEngine.errorsCount !== initialCliErrorCount) {
+                    showFinalCliOptions(true);
+                } else {
+                    showFinalCliOptions(false);
+                }
             } catch (error) {
                 console.error("Error in executeSnippet:", error);
             }
         }
 
-        function previewCommands(result) {
+        function previewCommands(result, resetOnClose = false) {
             if (!self.snippetPreviewWindow) {
                 self.snippetPreviewWindow = new jBox("Modal", {
                     id: "snippetPreviewWindow",
@@ -304,10 +258,15 @@ class PresetsTab {
                     closeButton: 'title',
                     animation: false,
                     isolateScroll: false,
-                    title: i18n.getMessage("cliConfirmSnippetDialogTitle", { fileName: "nope" }),
+                    title: i18n.getMessage("presetsCliConfirmationDialogTitle"),
                     content: $('#snippetpreviewcontent'),
                     onCreated: () =>
                         $("#snippetpreviewcontent a.confirm").on('click', () => executeSnippet()),
+                    onClose: () => {
+                        if(resetOnClose) {
+                            self.#resetAction();
+                        }
+                    },
                 });
             }
             previewArea.val(result.join("\n"));
@@ -315,19 +274,21 @@ class PresetsTab {
         }
 
         function showFinalCliOptions(errorsEncountered) {
-            $('#presets_cli_dialog textarea[name="commands"]').show();
+            if(errorsEncountered) {
+                $('#presets_cli_command_input').toggle(true);
+            }
             self.#dom.buttonCliSave.off("click");
             self.#dom.buttonCliSave.on("click", () => {
                 self.#cliEngine.subscribeResponseCallback(() => {
                     self.#cliEngine.unsubscribeResponseCallback();
-                    if (self.#cliEngine.inBatchMode() && errorsEncountered) {
+                    if (self.#cliEngine.inBatchMode && errorsEncountered) {
                         // In case of batch CLI command errors, the firmware requires extra "save" command for CLI safety.
                         // No need for this safety in presets as preset tab already detected errors and showed them to the user.
                         // At this point user clicked "save anyway".
-                        self.#cliEngine.sendLine(CliEngine.s_commandSave);
+                        self.#cliEngine.sendLine("save");
                     }
                 });
-                self.#cliEngine.sendLine(CliEngine.s_commandSave);
+                self.#cliEngine.sendLine("save");
                 self.#dom.dialogCli[0].close();
             });
             self.#dom.buttonCliSave.show();
@@ -339,7 +300,7 @@ class PresetsTab {
             self.#dom.buttonCliExit.show();
 
             self.#dom.dialogCli.on("close", () => {
-                self.#cliEngine.sendLine(CliEngine.s_commandExit);
+                self.#cliEngine.sendLine("exit");
                 self.disconnectCliMakeSure();
                 self.#dom.dialogCliWarning.hide();
                 self.#dom.buttonCliSave.hide();
@@ -350,8 +311,47 @@ class PresetsTab {
             });
         }
 
-        self.markPickedPresetsAsFavorites();
-        previewCommands(cliCommandsArray);
+        if(this.#presetsReviewDialog) {
+            unmount(this.#presetsReviewDialog);
+            this.#presetsReviewDialog = undefined;
+        }
+
+        if(skipReview) {
+            previewCommands(this.getPickedPresetsCli(), true);
+        } else {
+
+        this.#presetsReviewDialog = mount(SelectedPresetReviewDialog, {
+            target: document.querySelector("#svelte_components"),
+            props: {
+                presetInstances: this.#presetInstances,
+                /** @param {PresetInstance} presetInstance */
+                onEditPresetInstance: (presetInstance, onEditCompleteCallback) => {
+                    this.#displayPresets(this.#searchPresets(null, presetInstance.presetData.hash)).then(() => {
+                        this.freezeSearch = true;
+                        const presetPanel = this.presetsPanels[0];
+                        presetPanel.showPresetDetails(self.#presetDialog, self.#presetInstances, presetInstance, () => { 
+                            onEditCompleteCallback();
+                            this.freezeSearch = false;
+                            this.#updateSearchResults();
+                        });
+                    });
+                },
+                onCancelButtonClicked: () => {
+                    unmount(this.#presetsReviewDialog);
+                    this.#updateSearchResults();
+                    if(this.#presetInstances.length == 0) {
+                        this.enableSaveCancelButtons(false);
+                    }
+                },
+                onApplyButtonClicked: () => {
+                    unmount(this.#presetsReviewDialog);
+                    self.markPickedPresetsAsFavorites();
+                    previewCommands(this.getPickedPresetsCli());
+                }
+            },
+        });
+        $("#presets_review_dialog")[0].showModal();
+    }
     };
 
     disconnectCliMakeSure() {
@@ -361,13 +361,11 @@ class PresetsTab {
     };
 
     markPickedPresetsAsFavorites() {
-        for (const pickedPreset of this.#presetInstances) {
-            if (pickedPreset.source !== undefined) {
-                this.#favoritePresets.add(pickedPreset.presetData, pickedPreset.source);
+        for (const presetInstance of this.#presetInstances) {
+            if (presetInstance.source !== undefined) {
+                this.#presetTracker.add(presetInstance.viewLink);
             }
         }
-
-        this.#favoritePresets.saveToStorage();
     };
 
     setupCliDialogAndShow(cliDialogSettings) {
@@ -386,18 +384,21 @@ class PresetsTab {
                 cliDialogSettings.buttonCancelCallback?.();
             });
         }
-
+        $('#presets_cli_command_input').toggle(false);
         this.#dom.dialogCli[0].showModal();
         return this.#dom.dialogCli[0];
     };
 
-
-    setupMenuButtons() {
-        this.#dom.buttonSave.on("click", () => this.onSaveClick());
-        this.#dom.buttonCancel.on("click", () => {
-            this.#presetInstances = [];
+    #resetAction() {
+        this.#presetInstances = [];
             this.#updateSearchResults();
             this.enableSaveCancelButtons(false);
+    }
+
+    setupMenuButtons() {
+        this.#dom.buttonReview.on("click", () => this.onReviewClick());
+        this.#dom.buttonReset.on("click", () => {
+            this.#resetAction();
         });
 
         this.#dom.buttonBackupDiffAll.on("click", () => this.onSaveBackupClick("diff"));
@@ -407,8 +408,8 @@ class PresetsTab {
         this.#dom.buttonPresetSources.on("click", () => this.onPresetSourcesShowClick());
         this.#dom.buttonHideBackupWarning.on("click", () => this.onButtonHideBackupWarningClick());
 
-        this.#dom.buttonSave.toggleClass("disabled", false);
-        this.#dom.buttonCancel.toggleClass("disabled", false);
+        this.#dom.buttonReview.toggleClass("disabled", false);
+        this.#dom.buttonReset.toggleClass("disabled", false);
         this.#dom.reloadButton.on("click", () => this.reload());
 
         this.enableSaveCancelButtons(false);
@@ -416,8 +417,12 @@ class PresetsTab {
     };
 
     enableSaveCancelButtons(isEnabled) {
-        this.#dom.buttonSave.toggleClass("disabled", !isEnabled);
-        this.#dom.buttonCancel.toggleClass("disabled", !isEnabled);
+        this.#dom.buttonReview.toggleClass("disabled", !isEnabled);
+        this.#dom.buttonReset.toggleClass("disabled", !isEnabled);
+        this.#dom.buttonBackupLoad.toggleClass("disabled", isEnabled);
+        this.#dom.buttonBackupDiffAll.toggleClass("disabled", isEnabled);
+        this.#dom.buttonBackupDumpAll.toggleClass("disabled", isEnabled);
+        this.#dom.buttonPresetSources.toggleClass("disabled", isEnabled);
     };
 
     onButtonHideBackupWarningClick() {
@@ -440,7 +445,7 @@ class PresetsTab {
     };
 
     onPresetSourcesShowClick() {
-        this.presetsSourcesDialog.show().then(() => {
+        this.#sourcesDialog.show().then(() => {
             this.reload();
         });
     };
@@ -463,12 +468,6 @@ class PresetsTab {
                 buttonCancelCallback: null
             });
 
-        // const saveFailedDialogSettings = {
-        //     title: i18n.getMessage("warningTitle"),
-        //     text: i18n.getMessage("backupWaitDialogMessageErrorSavingBackup"),
-        //     buttonConfirmText: i18n.getMessage("close"),
-        // };
-
         await this.activateCli();
 
         await this.performBackup(backupType);
@@ -482,7 +481,8 @@ class PresetsTab {
                 description: `${suffix.toUpperCase()} files`,
             });
         } catch (err) {
-            console.log('Failed to save backup', err);
+            console.error('Failed to save backup', err);
+            alert(i18n.getMessage("backupFailedToSave"));
         }
 
         waitingDialog.close();
@@ -523,19 +523,18 @@ class PresetsTab {
 
     async onBackupLoadClick() {
         try {
-            const file = await window.filesystem.readTextFile({
-                description: "Backup files",
+            const file = await filesystem.readTextFile({
+                description: "Backup Files",
                 extensions: [".txt", ".config"],
             });
             if (!file) return;
 
-            console.log("Read file: " + file.name);
-            const pickedPreset = new PresetInstance({ title: "user configuration", cliStringsArr: file.content.split("\n") }, undefined);
+            const pickedPreset = new PresetInstance();
+            pickedPreset.renderedCliArr = file.content.split("\n");
             this.#presetInstances.push(pickedPreset);
-            this.onSaveClick();
-
+            this.onReviewClick(true);
         } catch (err) {
-            console.log("Failed to load config", err);
+            console.error("Failed to load config", err);
         }
     };
 
@@ -545,14 +544,13 @@ class PresetsTab {
         this.#readDom();
         this.setupMenuButtons();
         this.setupBackupWarning();
-        this.#dom.inputTextFilter.attr("placeholder", "Example: \"OMPHOBBY M5\", or \"OMPHOBBY M7\"");
+        this.#dom.inputTextFilter.attr("placeholder", i18n.getMessage("presetsSearchPlaceholder"));
 
-        this.presetsDetailedDialog = new PresetDialog($("#presets_detailed_dialog"), () => { this.enableSaveCancelButtons(true); }, this.#favoritePresets);
+        this.#presetDialog = new PresetDialog($("#presets_detailed_dialog"), () => { this.enableSaveCancelButtons(true); }, this.#presetTracker);
+        this.#sourcesDialog = new Sources("#presets_sources_dialog");
 
-        this.presetsSourcesDialog = new Sources("#presets_sources_dialog");
-
-        await this.presetsDetailedDialog.initialize();
-        await this.presetsSourcesDialog.load();
+        await this.#presetDialog.initialize();
+        await this.#sourcesDialog.load();
 
         await this.tryLoadPresets();
         GUI.content_ready(callback);
@@ -564,7 +562,7 @@ class PresetsTab {
         return new Promise((resolve) => {
             CONFIGURATOR.cliEngineActive = true;
             CONFIGURATOR.cliTab = 'presets';
-            this.#cliEngine.setUi($('#presets_cli_dialog .window'), $('#presets_cli_dialog .window .wrapper'), $('#presets_cli_dialog textarea[name="commands"]'));
+            this.#cliEngine.setUi($('#presets_cli_dialog .window'), $('#presets_cli_dialog .window .wrapper'), $('#presets_cli_command_input'));
             this.#cliEngine.enterCliMode();
 
             const waitForValidCliEngine = setInterval(() => {
@@ -584,8 +582,7 @@ class PresetsTab {
     };
 
     async tryLoadPresets() {
-        console.log("Attempting to load presets");
-        const activeSources = this.presetsSourcesDialog.collectActiveSources();
+        const activeSources = this.#sourcesDialog.collectActiveSources();
         this.activePresetsSources = [];
         for (let i = 0; i < activeSources.length; i++) {
             this.activePresetsSources.push(activeSources[i]);
@@ -594,7 +591,7 @@ class PresetsTab {
         this.#dom.divMainContent.toggle(false);
         this.#dom.divGlobalLoadingError.toggle(false);
         this.#dom.divGlobalLoading.toggle(true);
-        this.#dom.warningNotOfficialSource.toggle(this.presetsSourcesDialog.isThirdPartyActive);
+        this.#dom.warningNotOfficialSource.toggle(this.#sourcesDialog.isThirdPartyActive);
 
         const failedToLoad = [];
 
@@ -610,7 +607,6 @@ class PresetsTab {
             this.#dom.warningFailedToLoadRepositories.toggle(failedToLoad.length > 0);
             this.#dom.warningFailedToLoadRepositories.html(i18n.getMessage("presetsFailedToLoadRepositories", { "repos": failedToLoad.map(repo => repo.metadata.name).join(", ") }));
             this.activePresetsSources = this.activePresetsSources.filter(repo => !failedToLoad.includes(repo));
-            await this.checkPresetSourceVersion();
             this.#prepareFilterFields();
             this.#dom.divGlobalLoading.toggle(false);
             this.#dom.divMainContent.toggle(true);
@@ -618,7 +614,6 @@ class PresetsTab {
         catch (err) {
             this.#dom.divGlobalLoading.toggle(false);
             this.#dom.divGlobalLoadingError.toggle(true);
-            console.log("uhoh");
             console.error(err);
         }
     };
@@ -638,31 +633,6 @@ class PresetsTab {
                 this.#dom.selectStatus.multipleSelect('refresh');
                 resolve();
             }, 100);
-        });
-    };
-
-    checkPresetSourceVersion() {
-        const self = this;
-
-        return new Promise((resolve, reject) => {
-            const differentMajorVersionsRepos = self.activePresetsSources.filter(source => self.majorVersion !== source.index.majorVersion);
-            if (differentMajorVersionsRepos.length === 0) {
-                resolve();
-            } else {
-                const versionRequired = `${self.majorVersion}.X`;
-                const versionSource = `${differentMajorVersionsRepos[0].index.majorVersion}.${differentMajorVersionsRepos[0].index.minorVersion}`;
-
-                const dialogSettings = {
-                    title: i18n.getMessage("presetsWarningDialogTitle"),
-                    text: i18n.getMessage("presetsVersionMismatch", { "versionRequired": versionRequired, "versionSource": versionSource }),
-                    buttonYesText: i18n.getMessage("yes"),
-                    buttonNoText: i18n.getMessage("no"),
-                    buttonYesCallback: () => resolve(),
-                    buttonNoCallback: () => reject("Preset source version mismatch"),
-                };
-
-                GUI.showYesNoDialog(dialogSettings);
-            }
         });
     };
 
@@ -733,7 +703,6 @@ class PresetsTab {
 
             this.#updateSelectStyle();
             searchParams.authors = searchParams.authors.map(str => str.toLowerCase());
-            console.log("updating the dsearch results");
             this.#displayPresets(this.#searchPresets(searchParams));
         }
     };
@@ -752,8 +721,7 @@ class PresetsTab {
         select.parent().find($(".ms-choice")).toggleClass("presets_filter_select_nonempty", isSomethingSelected);
     };
 
-    #displayPresets(presets) {
-
+    async #displayPresets(presets) {
         this.presetsPanels.forEach(presetPanel => {
             presetPanel.remove();
         });
@@ -765,12 +733,13 @@ class PresetsTab {
 
         this.#dom.listNoFound.toggle(presets.length === 0);
 
-        presets.forEach(preset => {
-            const presetPanel = new PresetPanel(this.#dom.divPresetList, preset[0], preset[1], true, this.presetsSourcesDialog.isThirdPartyActive, this.#presetSelected(preset[0], preset[1]), this.#favoritePresets);
-            presetPanel.load();
+        for (let i = 0; i < presets.length; i++) {
+            const preset = presets[i];
+            const presetPanel = new PresetPanel(this.#dom.divPresetList, preset[0], preset[1], true, this.#sourcesDialog.isThirdPartyActive, this.#presetSelected(preset[0], preset[1]), null, this.#presetTracker);
+            await presetPanel.load();
             this.presetsPanels.push(presetPanel);
-            presetPanel.subscribeClick(this.presetsDetailedDialog, this.#presetInstances);
-        });
+            presetPanel.subscribeClick(this.#presetDialog, this.#presetInstances);
+        }
 
         this.#dom.listTooManyFound.appendTo(this.#dom.divPresetList);
     };
@@ -791,31 +760,36 @@ class PresetsTab {
         return presetFound;
     }
 
-    #searchPresets(searchParams) {
+    #searchPresets(searchParams, hash="") {
         const matchingPresets = [];
+        const presetsViewLinkHashTable = [];
         const seenHashes = new Set();
 
         for (const source of this.activePresetsSources) {
             for (const preset of source.index.presets) {
-                if ((this.#presetMatchesSearch(preset, searchParams) || this.#presetSelected(preset, source)) && !seenHashes.has(preset.hash)) {
+                if ((this.#presetMatchesSearch(preset, searchParams) || this.#presetSelected(preset, source) || (hash != "" && hash == preset.hash)) && !seenHashes.has(preset.hash)) {
                     matchingPresets.push([preset, source]);
+                    presetsViewLinkHashTable[preset.hash] = source.metadata.viewUrl + preset.fullPath;
                     seenHashes.add(preset.hash);
                 }
             }
         }
 
-        matchingPresets.sort((a, b) => this.#presetSearchPriorityComparer(a[0], b[0]));
+        matchingPresets.sort((a, b) => this.#presetSearchPriorityComparer(presetsViewLinkHashTable, a[0], b[0]));
 
         return matchingPresets;
     };
 
-    #presetSearchPriorityComparer(presetA, presetB) {
-        if (presetA.lastPickDate && presetB.lastPickDate) {
-            return presetB.lastPickDate - presetA.lastPickDate;
+    #presetSearchPriorityComparer(presetsViewLinkHashTable, presetA, presetB) {
+        const presetALastPickDate = this.#presetTracker.find(presetsViewLinkHashTable[presetA.hash]);
+        const presetBLastPickDate = this.#presetTracker.find(presetsViewLinkHashTable[presetB.hash]);
+
+        if (presetALastPickDate && presetBLastPickDate) {
+            return presetBLastPickDate - presetALastPickDate;
         }
 
-        if (presetA.lastPickDate || presetB.lastPickDate) {
-            return (presetA.lastPickDate) ? -1 : 1;
+        if (presetALastPickDate || presetBLastPickDate) {
+            return (presetALastPickDate) ? -1 : 1;
         }
 
         return (presetA.priority > presetB.priority) ? -1 : 1;
@@ -859,13 +833,11 @@ class PresetsTab {
      */
     #presetMatchesBoardName(preset) {
         if (undefined === preset.board_name || FC.CONFIG.boardName == '') {
-            console.log("board name not found!");
             return true;
         }
 
         let boardNameMatches = false;
         preset.board_name.forEach(boardName => {
-            console.log("checking board name: " + boardName + " vs: FC : " + FC.CONFIG.boardName);
             if (FC.CONFIG.boardName === boardName) {
                 boardNameMatches = true;
             }
@@ -967,6 +939,9 @@ class PresetsTab {
      * @returns 
      */
     #presetMatchesSearch(preset, searchParams) {
+        if (searchParams == null) {
+            return false;
+        }
         if (preset.hidden) {
             return false;
         }
@@ -1039,8 +1014,8 @@ class PresetsTab {
         CONFIGURATOR.cliEngineActive = false;
         CONFIGURATOR.cliEngineValid = false;
         CONFIGURATOR.cliTab = '';
-        TABS.presets.activePresetsSources = [];
-        TABS.presets.#presetInstances = [];
+        this.activePresetsSources = [];
+        this.#presetInstances = [];
         //this.domProgressDialog.close();
     };
 };

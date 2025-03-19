@@ -323,6 +323,7 @@ export default class Retriever {
 
         let presetContentsArray = presetText.split("\n").map(str => str.trim());
 
+        presetContentsArray.unshift(`# Preset: ${presetInstance.presetData.title}`);
         await this.#executeIncludes(presetContentsArray);
 
         this.#parser.populatePresetProperties(presetInstance, presetContentsArray);
