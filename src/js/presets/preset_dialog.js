@@ -424,6 +424,7 @@ export default class PresetDialog {
         this.#dom.optionsSelectPanel.toggle(optionsVisible);
 
         if (optionsVisible) {
+            console.log("Creating options select");
             this.#createOptionsSelect();
         }
 
