@@ -36,7 +36,7 @@
 .tab-presets .tab_title {
   padding: 20px 20px 0px 20px;
 }
-.tab-presets .tab_title .presets_top_bar_button_pannel .regular-button {
+.tab-presets .tab_title .presets_top_bar_button_panel .regular-button {
   margin-bottom: 0px;
   margin-top: 0px;
   line-height: 17px;
@@ -168,7 +168,7 @@
 .presets_title_text {
   display: inline-block;
 }
-.presets_top_bar_button_pannel {
+.presets_top_bar_button_panel {
   display: inline;
 }
 .presets_warning_backup {
@@ -806,7 +806,6 @@
 .presets_source_panel_reset, .presets_source_panel_save, .presets_source_panel_delete {
   float: right;
 }
-
 
 .presets_sources_dialog_title_panel {
   padding-bottom: .5ex;

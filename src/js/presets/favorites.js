@@ -1,7 +1,7 @@
 const s_maxFavoritePresetsCount = 50;
 const s_favoritePresetsListConfigStorageName = "FavoritePresetsList";
 
-class FavoritePreset {
+export class FavoritePreset {
     constructor(presetPath){
         this.presetPath = presetPath;
         this.lastPickDate = Date.now();

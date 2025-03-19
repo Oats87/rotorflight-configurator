@@ -7350,7 +7350,7 @@
     },
     "presetsButtonSave": {
         "message": "Save and Reboot",
-        "description": "A button that saves all appied presets - analog to 'save' command in CLI"
+        "description": "A button that saves all applied presets - analog to 'save' command in CLI"
     },
     "presetsButtonCancel": {
         "message": "Cancel",
@@ -7493,7 +7493,7 @@
         "description": "Placeholder for the options list dropdown"
     },
     "presetsReviewOptionsWarning": {
-        "message": "Please, review the list of options before picking this preset.",
+        "message": "Please review the list of options before picking this preset.",
         "description": "Dialog text to prompt user to review options for the preset"
     }
 }
