@@ -49,7 +49,7 @@ export default class Sources {
      */
     async load() {
         await new Promise(resolve => {
-            this.#dom.dialog.load("./tabs/presets/SourcesDialog/SourcesDialog.html", resolve);
+            this.#dom.dialog.load("./tabs/presets/sources_dialog.html", resolve);
         });
         this.#setupDialog();
         await this.#initializeSources();

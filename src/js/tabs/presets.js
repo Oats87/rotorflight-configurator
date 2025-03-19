@@ -86,7 +86,7 @@ class PresetsTab {
      * @property {?HTMLElement} listTooManyFound - The element displayed when too many items are found.
      * 
      */
-    
+
     /**
      * @type {DOMElements}
      */
@@ -473,20 +473,20 @@ class PresetsTab {
 
         await this.performBackup(backupType);
 
-       
-                const prefix = 'backup_' + backupType;
-                const suffix = '.txt';
-                try {
-                    await filesystem.writeTextFile(this.#cliEngine.outputHistory, {
-                        suggestedName: generateFilename(prefix, suffix),
-                        description: `${suffix.toUpperCase()} files`,
-                    });
-                } catch (err) {
-                    console.log('Failed to save backup', err);
-                }
 
-            waitingDialog.close();
-            await new Promise((resolve) => this.#cliEngine.sendLine("exit", resolve));
+        const prefix = 'backup_' + backupType;
+        const suffix = '.txt';
+        try {
+            await filesystem.writeTextFile(this.#cliEngine.outputHistory, {
+                suggestedName: generateFilename(prefix, suffix),
+                description: `${suffix.toUpperCase()} files`,
+            });
+        } catch (err) {
+            console.log('Failed to save backup', err);
+        }
+
+        waitingDialog.close();
+        await new Promise((resolve) => this.#cliEngine.sendLine("exit", resolve));
     };
 
     performBackup(backupType) {
@@ -607,19 +607,19 @@ class PresetsTab {
             }
         }
         try {
-                this.#dom.warningFailedToLoadRepositories.toggle(failedToLoad.length > 0);
-                this.#dom.warningFailedToLoadRepositories.html(i18n.getMessage("presetsFailedToLoadRepositories", { "repos": failedToLoad.map(repo => repo.metadata.name).join(", ") }));
-                this.activePresetsSources = this.activePresetsSources.filter(repo => !failedToLoad.includes(repo));
-                await this.checkPresetSourceVersion();
-                this.#prepareFilterFields();
-                this.#dom.divGlobalLoading.toggle(false);
-                this.#dom.divMainContent.toggle(true);
+            this.#dom.warningFailedToLoadRepositories.toggle(failedToLoad.length > 0);
+            this.#dom.warningFailedToLoadRepositories.html(i18n.getMessage("presetsFailedToLoadRepositories", { "repos": failedToLoad.map(repo => repo.metadata.name).join(", ") }));
+            this.activePresetsSources = this.activePresetsSources.filter(repo => !failedToLoad.includes(repo));
+            await this.checkPresetSourceVersion();
+            this.#prepareFilterFields();
+            this.#dom.divGlobalLoading.toggle(false);
+            this.#dom.divMainContent.toggle(true);
         }
         catch (err) {
-                this.#dom.divGlobalLoading.toggle(false);
-                this.#dom.divGlobalLoadingError.toggle(true);
-                console.log("uhoh");
-                console.error(err);
+            this.#dom.divGlobalLoading.toggle(false);
+            this.#dom.divGlobalLoadingError.toggle(true);
+            console.log("uhoh");
+            console.error(err);
         }
     };
 
@@ -753,7 +753,7 @@ class PresetsTab {
     };
 
     #displayPresets(presets) {
-        
+
         this.presetsPanels.forEach(presetPanel => {
             presetPanel.remove();
         });
@@ -858,18 +858,18 @@ class PresetsTab {
      * @returns 
      */
     #presetMatchesBoardName(preset) {
-            if (undefined === preset.board_name || FC.CONFIG.boardName == '') {
-                console.log("board name not found!");
-                return true;
-            }
+        if (undefined === preset.board_name || FC.CONFIG.boardName == '') {
+            console.log("board name not found!");
+            return true;
+        }
 
-            let boardNameMatches = false;
-            preset.board_name.forEach(boardName => {
-                console.log("checking board name: " + boardName + " vs: FC : " + FC.CONFIG.boardName);
-                if (FC.CONFIG.boardName === boardName) {
-                    boardNameMatches = true;
-                }
-            });
+        let boardNameMatches = false;
+        preset.board_name.forEach(boardName => {
+            console.log("checking board name: " + boardName + " vs: FC : " + FC.CONFIG.boardName);
+            if (FC.CONFIG.boardName === boardName) {
+                boardNameMatches = true;
+            }
+        });
 
         return boardNameMatches;
     };

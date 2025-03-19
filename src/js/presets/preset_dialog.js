@@ -171,7 +171,7 @@ export default class PresetDialog {
      */
     initialize() {
         return new Promise(resolve => {
-            this.#dom.dialog.load("./tabs/presets/DetailedDialog/PresetsDetailedDialog.html", () => {
+            this.#dom.dialog.load("./tabs/presets/preset_dialog.html", () => {
                 this.#readDom();
                 resolve();
             });
@@ -245,11 +245,6 @@ export default class PresetDialog {
     #onCancelButtonClicked() {
         this.#dom.dialog[0].close();
     }
-
-    // #getFinalCliText() {
-    //     const optionsToInclude = this.#dom.optionsSelect.multipleSelect("getSelects", "value");
-    //     return this.#presetInstance.source.retriever.parser.renderPreset(this.#presetInstance.presetData.originalPresetCliStrings, optionsToInclude);
-    // }
 
     #loadPresetUi() {
         this.#loadDescription();

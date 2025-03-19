@@ -186,7 +186,7 @@ export default class PresetPanel
     }
 
     load() {
-        this.#dom.divWrapper.load("./tabs/presets/TitlePanel/PresetTitlePanelBody.html", () => this.#setupHtml());
+        this.#dom.divWrapper.load("./tabs/presets/preset_panel.html", () => this.#setupHtml());
     }
 
     /**
